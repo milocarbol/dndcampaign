@@ -1,0 +1,18 @@
+<h1>{{ name }}</h1>
+<p>{{ desc }}</p>
+{% if parents %}
+    <h2>Part of</h2>
+    <ul>
+        {% for parent in parents %}
+            <li><a href="{% url 'campaign:detail' parent %}">{{ parent }}</a></li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% if children %}
+    <h2>Points of interest</h2>
+    <ul>
+        {% for child in children %}
+            <li><a href="{% url 'campaign:detail' child %}">{{ child }}</a></li>
+        {% endfor %}
+    </ul>
+{% endif %}

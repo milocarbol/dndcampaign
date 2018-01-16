@@ -1,0 +1,9 @@
+{% if things %}
+    <ul>
+    {% for thing in things %}
+        <li>{{ thing.name }}</li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No content.</p>
+{% endif %}
