@@ -10,7 +10,7 @@ class ThingType(models.Model):
 
 class Thing(models.Model):
     name = models.CharField(max_length=50, unique=True)
-    description = models.CharField(max_length=500)
+    description = models.TextField(max_length=500)
     children = models.ManyToManyField('self', blank=True, symmetrical=False)
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE, null=True)
 
