@@ -7,3 +7,8 @@ class SearchForm(forms.Form):
         'type': 'search',
         'placeholder': 'Search',
         'aria-label': 'Search'}))
+
+
+class UploadFileForm(forms.Form):
+    title = forms.CharField(max_length=50)
+    file = forms.FileField()

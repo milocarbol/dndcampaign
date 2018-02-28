@@ -1,9 +1,10 @@
+import json
+
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.urls import reverse
-from django.core import serializers
 from .models import Thing, ThingType, Attribute, AttributeValue
-from .forms import SearchForm
+from .forms import SearchForm, UploadFileForm
 
 
 def index(request):
@@ -39,40 +40,54 @@ def detail(request, name):
 
 
 def export(request):
-
-    thing_type_data = []
-    for thing_type in ThingType.objects.all():
-        thing_type_data.append({'name': thing_type.name})
-
     thing_data = []
     for thing in Thing.objects.all():
+        attributes = []
+        attribute_values = AttributeValue.objects.filter(thing=thing)
+        for attribute_value in attribute_values:
+            attributes.append({
+                'attribute': attribute_value.attribute.name,
+                'value': attribute_value.value
+            })
         thing_data.append({
             'name': thing.name,
             'description': thing.description,
             'thing_type': thing.thing_type.name,
-            'children': [child.name for child in thing.children.all()]
-        })
-
-    attribute_data = []
-    for attribute in Attribute.objects.all():
-        attribute_data.append({
-            'thing_type': attribute.thing_type.name,
-            'name': attribute.name
-        })
-
-    attribute_value_data = []
-    for attribute_value in AttributeValue.objects.all():
-        attribute_value_data.append({
-            'thing': attribute_value.thing.name,
-            'attribute': attribute_value.attribute.name,
-            'value': attribute_value.value
+            'children': [child.name for child in thing.children.all()],
+            'attribute_values': attributes
         })
 
     data = {
-        'ThingTypes': thing_type_data,
-        'Things': thing_data,
-        'Attributes': attribute_data,
-        'AttributeValues': attribute_value_data
+        'things': thing_data,
     }
 
     return JsonResponse(data)
+
+
+def import_campaign(request):
+    if request.method == 'POST':
+        form = UploadFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            save_campaign(request.FILES['file'].read().decode('UTF-8'))
+            return HttpResponseRedirect('/')
+
+    return HttpResponseRedirect('/')
+
+
+def save_campaign(json_file):
+    Thing.objects.all().delete()
+    AttributeValue.objects.all().delete()
+    data = json.loads(json_file)
+    for thing in data['things']:
+        thing_object = Thing(name=thing['name'], description=thing['description'], thing_type=ThingType.objects.get(name=thing['thing_type']))
+        thing_object.save()
+
+        for attribute in thing['attribute_values']:
+            attr_value_object = AttributeValue(thing=thing_object, attribute=Attribute.objects.get(name=attribute['attribute'], thing_type=thing_object.thing_type), value=attribute['value'])
+            attr_value_object.save()
+
+    for thing in data['things']:
+        thing_object = Thing.objects.get(name=thing['name'])
+        for child in thing['children']:
+            thing_object.children.add(Thing.objects.get(name=child))
+        thing_object.save()
