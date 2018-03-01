@@ -21,9 +21,26 @@ def search(request):
         return HttpResponseRedirect('/')
 
 
+def find_closest_thing(name):
+    results = Thing.objects.filter(name__icontains=name)
+    if len(results) == 0:
+        raise Thing.DoesNotExist
+    elif len(results) == 1:
+        return results[0]
+    else:
+        min_length_diff = len(results[0].name) - len(name)
+        result = results[0]
+        for r in results[1:]:
+            new_length_diff = len(r.name) - len(name)
+            if new_length_diff < min_length_diff:
+                result = r
+                min_length_diff = new_length_diff
+        return result
+
+
 def detail(request, name):
     try:
-        thing = Thing.objects.get(name__iexact=name)
+        thing = find_closest_thing(name)
         parents = {
             'locations': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Location')]),
             'npcs': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='NPC')]),
