@@ -16,17 +16,15 @@ def index(request):
 def search(request):
     form = SearchForm(request.POST)
     if form.is_valid():
-        return HttpResponseRedirect(reverse('campaign:detail', args=(form.cleaned_data['search_text'],)))
-    else:
-        return HttpResponseRedirect('/')
+        return go_to_closest_thing(form.cleaned_data['search_text'])
 
 
-def find_closest_thing(name):
+def go_to_closest_thing(name):
     results = Thing.objects.filter(name__icontains=name)
     if len(results) == 0:
-        raise Thing.DoesNotExist
+        raise Http404('"{0}" does not exist.'.format(name))
     elif len(results) == 1:
-        return results[0]
+        return HttpResponseRedirect(reverse('campaign:detail', args=(results[0].name,)))
     else:
         min_length_diff = len(results[0].name) - len(name)
         result = results[0]
@@ -35,37 +33,38 @@ def find_closest_thing(name):
             if new_length_diff < min_length_diff:
                 result = r
                 min_length_diff = new_length_diff
-        return result
+        return HttpResponseRedirect(reverse('campaign:detail', args=(result.name,)))
 
 
 def detail(request, name):
     try:
-        thing = find_closest_thing(name)
-        parents = {
-            'locations': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Location')]),
-            'npcs': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='NPC')]),
-            'factions': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Faction')])
-        }
-
-        children = {
-            'locations': sorted([child.name for child in thing.children.filter(thing_type__name='Location')]),
-            'npcs': sorted([child.name for child in thing.children.filter(thing_type__name='NPC')]),
-            'factions': sorted([child.name for child in thing.children.filter(thing_type__name='Faction')])
-        }
-
-        context = {
-            'name': thing.name,
-            'desc': thing.description,
-            'parent_locations': parents['locations'],
-            'parent_factions': parents['factions'],
-            'child_locations': children['locations'],
-            'child_npcs': children['npcs'],
-            'child_factions': children['factions'],
-            'form': SearchForm()
-        }
-        return render(request, 'campaign/detail.html', context)
+        thing = Thing.objects.get(name=name)
     except Thing.DoesNotExist:
-        raise Http404('"{0}" does not exist.'.format(name))
+        return go_to_closest_thing(name)
+
+    parents = {
+        'locations': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Location')]),
+        'npcs': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='NPC')]),
+        'factions': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Faction')])
+    }
+
+    children = {
+        'locations': sorted([child.name for child in thing.children.filter(thing_type__name='Location')]),
+        'npcs': sorted([child.name for child in thing.children.filter(thing_type__name='NPC')]),
+        'factions': sorted([child.name for child in thing.children.filter(thing_type__name='Faction')])
+    }
+
+    context = {
+        'name': thing.name,
+        'desc': thing.description,
+        'parent_locations': parents['locations'],
+        'parent_factions': parents['factions'],
+        'child_locations': children['locations'],
+        'child_npcs': children['npcs'],
+        'child_factions': children['factions'],
+        'form': SearchForm()
+    }
+    return render(request, 'campaign/detail.html', context)
 
 
 def export(request):
