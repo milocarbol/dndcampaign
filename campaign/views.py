@@ -24,14 +24,26 @@ def search(request):
 def detail(request, name):
     try:
         thing = Thing.objects.get(name__iexact=name)
-        parents = [parent.name for parent in Thing.objects.filter(children=thing)]
-        children = [child.name for child in thing.children.all()]
+        parents = {
+            'locations': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Location')]),
+            'npcs': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='NPC')]),
+            'factions': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Faction')])
+        }
+
+        children = {
+            'locations': sorted([child.name for child in thing.children.filter(thing_type__name='Location')]),
+            'npcs': sorted([child.name for child in thing.children.filter(thing_type__name='NPC')]),
+            'factions': sorted([child.name for child in thing.children.filter(thing_type__name='Faction')])
+        }
 
         context = {
             'name': thing.name,
             'desc': thing.description,
-            'parents': sorted(parents),
-            'children': sorted(children),
+            'parent_locations': parents['locations'],
+            'parent_factions': parents['factions'],
+            'child_locations': children['locations'],
+            'child_npcs': children['npcs'],
+            'child_factions': children['factions'],
             'form': SearchForm()
         }
         return render(request, 'campaign/detail.html', context)
