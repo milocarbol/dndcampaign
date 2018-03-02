@@ -1,0 +1,22 @@
+{% extends "campaign/base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-sm">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-4 offset-sm-4">
+            <form enctype="multipart/form-data" action="{% url 'campaign:import' %}" method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div class="form-group">
+                        {{ field }}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Import</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -59,7 +59,7 @@ def list_all(request, thing_type):
 
     context = {
         'types': list_data,
-        'form': SearchForm()
+        'search_form': SearchForm()
     }
 
     return render(request, 'campaign/list.html', context)
@@ -131,7 +131,7 @@ def detail(request, name):
         'child_locations': child_locations,
         'child_npcs': child_npcs,
         'child_factions': child_factions,
-        'form': SearchForm()
+        'search_form': SearchForm()
     }
     return render(request, 'campaign/detail.html', context)
 
@@ -184,7 +184,10 @@ def export(request):
         'things': thing_data,
     }
 
-    return JsonResponse(data)
+    response = JsonResponse(data)
+    response['Content-Disposition'] = 'attachment; filename="campaign.json"'
+
+    return response
 
 
 def import_campaign(request):
@@ -192,9 +195,15 @@ def import_campaign(request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             save_campaign(request.FILES['file'].read().decode('UTF-8'))
-            return HttpResponseRedirect('/')
-
-    return HttpResponseRedirect('/')
+            return HttpResponseRedirect('/campaign')
+        else:
+            print(request.POST)
+    else:
+        context = {
+            'search_form': SearchForm(),
+            'form': UploadFileForm()
+        }
+        return render(request, 'campaign/import.html', context)
 
 
 def save_campaign(json_file):
@@ -236,7 +245,7 @@ def move_thing_options(request, name):
             'location': current_location
         },
         'options': options,
-        'form': SearchForm()
+        'search_form': SearchForm()
     }
 
     return render(request, 'campaign/move_options.html', context)

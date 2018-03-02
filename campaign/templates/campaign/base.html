@@ -23,10 +23,19 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'campaign:list' 'NPC' %}">NPCs</a>
                         </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Manage
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <a class="dropdown-item" href="{% url 'campaign:export' %}">Export Campaign</a>
+                                <a class="dropdown-item" href="{% url 'campaign:import' %}">Import Campaign</a>
+                            </div>
+                        </li>
                     </ul>
                     <form class="form-inline my-2 my-lg-0" action="{% url 'campaign:search' %}" method="post">
                         {% csrf_token %}
-                        {% for field in form %}
+                        {% for field in search_form %}
                             {{ field }}
                         {% endfor %}
                         <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
