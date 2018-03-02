@@ -3,8 +3,8 @@
 <div class="container">
     <div class="row">
         <div class="col-sm">
-            <h1>{{ name }}{% if parent_locations %} ({% for parent in parent_locations %}<a href="{% url 'campaign:detail' parent %}">{{ parent }}</a>{% endfor %}){% endif %}</h1>
-            <p>{{ desc }}</p>
+            <h1>{{ thing.name }}{% if thing.link %} <a href="{{ thing.link }}" class="badge badge-pill badge-danger">D&D Beyond</a>{% endif %}</h1>
+            <p>{{ thing.description }}</p>
         </div>
     </div>
     {% if parent_factions %}
@@ -12,8 +12,8 @@
             <div class="col-sm">
                 <h4>Member of</h4>
                 <div class="list-group">
-                    {% for parent in parent_factions %}
-                        <a href="{% url 'campaign:detail' parent %}" class="list-group-item list-group-item-action">{{ parent }}</a>
+                    {% for thing in parent_factions %}
+                        {% include "campaign/thing_block.html" %}
                     {% endfor %}
                 </div>
             </div>
@@ -24,8 +24,8 @@
             <div class="col-sm">
                 <h4>Points of interest</h4>
                 <div class="list-group">
-                    {% for child in child_locations %}
-                        <a href="{% url 'campaign:detail' child %}" class="list-group-item list-group-item-action">{{ child }}</a></li>
+                    {% for thing in child_locations %}
+                        {% include "campaign/thing_block.html" %}
                     {% endfor %}
                 </div>
             </div>
@@ -36,8 +36,8 @@
             <div class="col-sm">
                 <h4>Factions</h4>
                 <div class="list-group">
-                    {% for child in child_factions %}
-                        <a href="{% url 'campaign:detail' child %}" class="list-group-item list-group-item-action">{{ child }}</a></li>
+                    {% for thing in child_factions %}
+                        {% include "campaign/thing_block.html" %}
                     {% endfor %}
                 </div>
             </div>
@@ -48,8 +48,8 @@
             <div class="col-sm">
                 <h4>Notable People</h4>
                 <div class="list-group">
-                    {% for child in child_npcs %}
-                        <a href="{% url 'campaign:detail' child %}" class="list-group-item list-group-item-action">{{ child }}</a></li>
+                    {% for thing in child_npcs %}
+                        {% include "campaign/thing_block.html" %}
                     {% endfor %}
                 </div>
             </div>

@@ -48,6 +48,7 @@ def list_all(request, type):
 
     context = {
         'things': list_data,
+        'heading': '{0}s'.format(type),
         'form': SearchForm()
     }
 
@@ -60,26 +61,56 @@ def detail(request, name):
     except Thing.DoesNotExist:
         return go_to_closest_thing(name)
 
-    parents = {
-        'locations': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Location')]),
-        'npcs': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='NPC')]),
-        'factions': sorted([parent.name for parent in Thing.objects.filter(children=thing, thing_type__name='Faction')])
+    parent_locations = []
+    parent_factions = []
+    for parent in Thing.objects.filter(children=thing).order_by('name'):
+        if parent.thing_type.name == 'Location':
+            parent_locations.append({
+                'name': parent.name,
+                'description': parent.description
+            })
+        elif parent.thing_type.name == 'Faction':
+            parent_factions.append({
+                'name': parent.name,
+                'description': parent.description
+            })
+
+    child_locations = []
+    child_factions = []
+    child_npcs = []
+    for child in thing.children.order_by('name'):
+        if child.thing_type.name == 'Location':
+            child_locations.append({
+                'name': child.name,
+                'description': child.description
+            })
+        elif child.thing_type.name == 'Faction':
+            child_factions.append({
+                'name': child.name,
+                'description': child.description
+            })
+        elif child.thing_type.name == 'NPC':
+            child_npcs.append({
+                'name': child.name,
+                'description': child.description
+            })
+
+    thing_info = {
+        'name': thing.name,
+        'description': thing.description
     }
 
-    children = {
-        'locations': sorted([child.name for child in thing.children.filter(thing_type__name='Location')]),
-        'npcs': sorted([child.name for child in thing.children.filter(thing_type__name='NPC')]),
-        'factions': sorted([child.name for child in thing.children.filter(thing_type__name='Faction')])
-    }
+    attribute_values = AttributeValue.objects.filter(thing=thing)
+    for attribute_value in attribute_values:
+        thing_info[attribute_value.attribute.name.lower()] = attribute_value.value
 
     context = {
-        'name': thing.name,
-        'desc': thing.description,
-        'parent_locations': parents['locations'],
-        'parent_factions': parents['factions'],
-        'child_locations': children['locations'],
-        'child_npcs': children['npcs'],
-        'child_factions': children['factions'],
+        'thing': thing_info,
+        'parent_locations': parent_locations,
+        'parent_factions': parent_factions,
+        'child_locations': child_locations,
+        'child_npcs': child_npcs,
+        'child_factions': child_factions,
         'form': SearchForm()
     }
     return render(request, 'campaign/detail.html', context)
