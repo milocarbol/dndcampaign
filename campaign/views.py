@@ -36,6 +36,24 @@ def go_to_closest_thing(name):
         return HttpResponseRedirect(reverse('campaign:detail', args=(result.name,)))
 
 
+def list_all(request, type):
+    things = Thing.objects.filter(thing_type__name__iexact=type).order_by('name')
+    list_data = []
+
+    for thing in things:
+        list_data.append({
+            'name': thing.name,
+            'description': thing.description
+        })
+
+    context = {
+        'things': list_data,
+        'form': SearchForm()
+    }
+
+    return render(request, 'campaign/list.html', context)
+
+
 def detail(request, name):
     try:
         thing = Thing.objects.get(name=name)
