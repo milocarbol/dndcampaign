@@ -11,5 +11,7 @@ urlpatterns = [
     path('search', views.search, name='search'),
     path('export', views.export, name='export'),
     path('import', csrf_exempt(views.import_campaign), name='import'),
-    path('list/<thing_type>', views.list_all, name='list')
+    path('list/<thing_type>', views.list_all, name='list'),
+    path('move/options/<name>', views.move_thing_options, name='move_options'),
+    path('move/confirm/<name>/to/<new_location_name>', views.move_thing_confirm, name='move_confirm')
 ]

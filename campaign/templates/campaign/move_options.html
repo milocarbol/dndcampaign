@@ -1,0 +1,21 @@
+{% extends "campaign/base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-sm">
+            <h1>Move {{ thing.name }}</h1>
+            <p>Current location: {% if thing.location %}{{ thing.location }}{% else %}Not set{% endif %}</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            <div class="list-group">
+                <a href="{% url 'campaign:move_confirm' thing.name 'CLEAR' %}" class="list-group-item list-group-item-danger">CLEAR CURRENT LOCATION</a>
+                {% for option in options %}
+                    <a href="{% url 'campaign:move_confirm' thing.name option %}" class="list-group-item list-group-item-action">{{ option }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -144,7 +144,22 @@ def get_attributes_to_display(thing):
             'name': attribute_value.attribute.name,
             'value': attribute_value.value
         })
+
+    parent_location = get_parent_location(thing)
+    if parent_location:
+        attributes_to_display.append({
+            'name': 'Location',
+            'value': parent_location
+        })
     return attributes_to_display
+
+
+def get_parent_location(thing):
+    parents = Thing.objects.filter(children=thing, thing_type__name='Location').order_by('name')
+    if len(parents) == 0:
+        return None
+    else:
+        return parents[0].name
 
 
 def export(request):
@@ -199,3 +214,50 @@ def save_campaign(json_file):
         for child in thing['children']:
             thing_object.children.add(Thing.objects.get(name=child))
         thing_object.save()
+
+
+def move_thing_options(request, name):
+    try:
+        thing = Thing.objects.get(name=name)
+    except Thing.DoesNotExist:
+        raise Http404
+
+    current_locations = Thing.objects.filter(children=thing, thing_type__name='Location')
+    if len(current_locations) == 0:
+        current_location = None
+    else:
+        current_location = current_locations[0].name
+
+    options = [location.name for location in Thing.objects.filter(thing_type__name='Location').order_by('name')]
+
+    context = {
+        'thing': {
+            'name': thing.name,
+            'location': current_location
+        },
+        'options': options,
+        'form': SearchForm()
+    }
+
+    return render(request, 'campaign/move_options.html', context)
+
+
+def move_thing_confirm(request, name, new_location_name):
+    try:
+        thing = Thing.objects.get(name=name)
+        if new_location_name == 'CLEAR':
+            new_location = None
+        else:
+            new_location = Thing.objects.get(name=new_location_name)
+    except Thing.DoesNotExist:
+        raise Http404
+
+    for old_location in Thing.objects.filter(children=thing, thing_type__name='Location'):
+        old_location.children.remove(thing)
+        old_location.save()
+
+    if new_location:
+        new_location.children.add(thing)
+        new_location.save()
+
+    return HttpResponseRedirect(reverse('campaign:detail', args=(name,)))
