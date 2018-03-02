@@ -1,9 +1,11 @@
 {% extends "campaign/base.html" %}
 {% block content %}
 <div class="container">
-    <h1>{{ heading }}</h1>
-    {% for thing in things %}
-        {% include "campaign/thing_block.html" %}
+    {% for type in types %}
+        <h1>{{ type.name }}</h1>
+        {% for thing in type.things %}
+            {% include "campaign/thing_block.html" %}
+        {% endfor %}
     {% endfor %}
 </div>
 {% endblock %}

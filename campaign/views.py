@@ -36,24 +36,38 @@ def go_to_closest_thing(name):
         return HttpResponseRedirect(reverse('campaign:detail', args=(result.name,)))
 
 
-def list_all(request, type):
-    things = Thing.objects.filter(thing_type__name__iexact=type).order_by('name')
+def list_all(request, thing_type):
+    if thing_type:
+        types = [thing_type]
+    else:
+        types = [thing.name for thing in ThingType.objects.all()]
+
     list_data = []
 
-    for thing in things:
+    for t in types:
+        data_for_type = []
+        for thing in Thing.objects.filter(thing_type__name__iexact=t).order_by('name'):
+            data_for_type.append({
+                'name': thing.name,
+                'description': thing.description,
+                'attributes': get_attributes_to_display(thing)
+            })
+        print(data_for_type)
         list_data.append({
-            'name': thing.name,
-            'description': thing.description,
-            'attributes': get_attributes_to_display(thing)
+            'name': '{0}s'.format(t),
+            'things': data_for_type
         })
 
     context = {
-        'things': list_data,
-        'heading': '{0}s'.format(type),
+        'types': list_data,
         'form': SearchForm()
     }
 
     return render(request, 'campaign/list.html', context)
+
+
+def list_everything(request):
+    return list_all(request, None)
 
 
 def detail(request, name):

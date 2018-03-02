@@ -6,10 +6,10 @@ from . import views
 
 app_name = 'campaign'
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', views.list_everything, name='list_everything'),
     path('thing/<name>', views.detail, name='detail'),
     path('search', views.search, name='search'),
     path('export', views.export, name='export'),
     path('import', csrf_exempt(views.import_campaign), name='import'),
-    path('list/<type>', views.list_all, name='list')
+    path('list/<thing_type>', views.list_all, name='list')
 ]
