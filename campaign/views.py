@@ -52,7 +52,6 @@ def list_all(request, thing_type):
                 'description': thing.description,
                 'attributes': get_attributes_to_display(thing)
             })
-        print(data_for_type)
         list_data.append({
             'name': '{0}s'.format(t),
             'things': data_for_type
