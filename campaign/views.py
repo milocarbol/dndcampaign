@@ -303,8 +303,10 @@ def create_new_location(request):
             thing.save()
 
             new_parent = form.cleaned_data['location']
-            new_parent.children.add(thing)
-            new_parent.save()
+
+            if new_parent:
+                new_parent.children.add(thing)
+                new_parent.save()
 
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
@@ -334,8 +336,9 @@ def create_new_faction(request):
             thing.save()
 
             new_parent = form.cleaned_data['location']
-            new_parent.children.add(thing)
-            new_parent.save()
+            if new_parent:
+                new_parent.children.add(thing)
+                new_parent.save()
 
             leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'].name)
             leader.save()
@@ -365,12 +368,16 @@ def create_new_npc(request):
             thing = Thing(name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='NPC'))
             thing.save()
 
-            new_parents = [form.cleaned_data['location']]
+            new_parents = []
+            if form.cleaned_data['location']:
+                new_parents.append(form.cleaned_data['location'])
             new_parents.extend(form.cleaned_data['factions'])
             for new_parent in new_parents:
                 new_parent.children.add(thing)
                 new_parent.save()
 
+            race = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Race'), value=form.cleaned_data['race'])
+            race.save()
             attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='NPC'), value=form.cleaned_data['attitude'])
             attitude.save()
             occupation = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Occupation'), value=form.cleaned_data['occupation'])
