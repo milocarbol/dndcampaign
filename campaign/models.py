@@ -21,6 +21,7 @@ class Thing(models.Model):
 class Attribute(models.Model):
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
+    display_in_summary = models.BooleanField(default=False)
 
     class Meta:
         unique_together = (('thing_type', 'name'),)
@@ -33,6 +34,9 @@ class AttributeValue(models.Model):
     thing = models.ForeignKey(Thing, on_delete=models.CASCADE)
     attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE)
     value = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = (('thing', 'attribute'),)
 
     def __str__(self):
         return '[' + self.thing.name + '] ' + self.attribute.name + ': ' + self.value

@@ -43,7 +43,8 @@ def list_all(request, type):
     for thing in things:
         list_data.append({
             'name': thing.name,
-            'description': thing.description
+            'description': thing.description,
+            'attributes': get_attributes_to_display(thing)
         })
 
     context = {
@@ -67,12 +68,14 @@ def detail(request, name):
         if parent.thing_type.name == 'Location':
             parent_locations.append({
                 'name': parent.name,
-                'description': parent.description
+                'description': parent.description,
+                'attributes': get_attributes_to_display(parent)
             })
         elif parent.thing_type.name == 'Faction':
             parent_factions.append({
                 'name': parent.name,
-                'description': parent.description
+                'description': parent.description,
+                'attributes': get_attributes_to_display(parent)
             })
 
     child_locations = []
@@ -82,25 +85,29 @@ def detail(request, name):
         if child.thing_type.name == 'Location':
             child_locations.append({
                 'name': child.name,
-                'description': child.description
+                'description': child.description,
+                'attributes': get_attributes_to_display(child)
             })
         elif child.thing_type.name == 'Faction':
             child_factions.append({
                 'name': child.name,
-                'description': child.description
+                'description': child.description,
+                'attributes': get_attributes_to_display(child)
             })
         elif child.thing_type.name == 'NPC':
             child_npcs.append({
                 'name': child.name,
-                'description': child.description
+                'description': child.description,
+                'attributes': get_attributes_to_display(child)
             })
 
     thing_info = {
         'name': thing.name,
-        'description': thing.description
+        'description': thing.description,
+        'attributes': get_attributes_to_display(thing)
     }
 
-    attribute_values = AttributeValue.objects.filter(thing=thing)
+    attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
     for attribute_value in attribute_values:
         thing_info[attribute_value.attribute.name.lower()] = attribute_value.value
 
@@ -114,6 +121,17 @@ def detail(request, name):
         'form': SearchForm()
     }
     return render(request, 'campaign/detail.html', context)
+
+
+def get_attributes_to_display(thing):
+    attributes_to_display = []
+    attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=True).order_by('attribute__name')
+    for attribute_value in attribute_values:
+        attributes_to_display.append({
+            'name': attribute_value.attribute.name,
+            'value': attribute_value.value
+        })
+    return attributes_to_display
 
 
 def export(request):

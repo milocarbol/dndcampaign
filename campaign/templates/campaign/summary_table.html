@@ -1,0 +1,18 @@
+{% if thing.attributes %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            {% for attribute in thing.attributes %}
+                <th scope="col" class="text-center">{{ attribute.name }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            {% for attribute in thing.attributes %}
+                <td class="text-center">{{ attribute.value }}</td>
+            {% endfor %}
+        </tr>
+    </tbody>
+</table>
+{% endif %}
