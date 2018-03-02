@@ -28,6 +28,10 @@
                                 Manage
                             </a>
                             <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'Location' %}">New Location</a>
+                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'Faction' %}">New Faction</a>
+                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'NPC' %}">New NPC</a>
+                                <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="{% url 'campaign:export' %}">Export Campaign</a>
                                 <a class="dropdown-item" href="{% url 'campaign:import' %}">Import Campaign</a>
                             </div>

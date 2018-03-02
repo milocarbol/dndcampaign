@@ -1,0 +1,22 @@
+{% extends "campaign/base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-sm">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-4 offset-sm-4">
+            <form action="{% url 'campaign:new_thing' thing_type %}" method="post">
+                {% csrf_token %}
+                {% for field in thing_form %}
+                    <div class="form-group">
+                        {{ field.label_tag }} {{ field }}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

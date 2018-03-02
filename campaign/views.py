@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.urls import reverse
 from .models import Thing, ThingType, Attribute, AttributeValue
-from .forms import SearchForm, UploadFileForm
+from .forms import SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm
 
 
 def index(request):
@@ -270,3 +270,121 @@ def move_thing_confirm(request, name, new_location_name):
         new_location.save()
 
     return HttpResponseRedirect(reverse('campaign:detail', args=(name,)))
+
+
+def new_thing(request, thing_type):
+    if thing_type == 'Location':
+        return create_new_location(request)
+    elif thing_type == 'Faction':
+        return create_new_faction(request)
+    elif thing_type == 'NPC':
+        return create_new_npc(request)
+    else:
+        raise Http404
+
+
+def create_new_location(request):
+    if request.method == 'POST':
+        form = NewLocationForm(request.POST)
+        if form.is_valid():
+            thing = Thing(name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Location'))
+            thing.save()
+
+            children = []
+            children.extend(form.cleaned_data['factions'])
+            children.extend(form.cleaned_data['npcs'])
+
+            for child in children:
+                current_parent_locations = Thing.objects.filter(children=child, thing_type__name='Location')
+                for parent in current_parent_locations:
+                    parent.children.remove(child)
+                    parent.save()
+                thing.children.add(child)
+            thing.save()
+
+            new_parent = form.cleaned_data['location']
+            new_parent.children.add(thing)
+            new_parent.save()
+
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = NewLocationForm()
+
+    context = {
+        'search_form': SearchForm(),
+        'thing_form': form,
+        'thing_type': 'Location'
+    }
+    return render(request, 'campaign/new_thing.html', context)
+
+
+def create_new_faction(request):
+    if request.method == 'POST':
+        form = NewFactionForm(request.POST)
+        if form.is_valid():
+            thing = Thing(name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Faction'))
+            thing.save()
+
+            for child in form.cleaned_data['npcs']:
+                current_parent_locations = Thing.objects.filter(children=child, thing_type__name='Location')
+                for parent in current_parent_locations:
+                    parent.children.remove(child)
+                    parent.save()
+                thing.children.add(child)
+            thing.save()
+
+            new_parent = form.cleaned_data['location']
+            new_parent.children.add(thing)
+            new_parent.save()
+
+            leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'].name)
+            leader.save()
+            attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='Faction'), value=form.cleaned_data['attitude'])
+            attitude.save()
+            power = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Power'), value=form.cleaned_data['power'])
+            power.save()
+            reach = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Reach'), value=form.cleaned_data['reach'])
+            reach.save()
+
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = NewFactionForm()
+
+    context = {
+        'search_form': SearchForm(),
+        'thing_form': form,
+        'thing_type': 'Faction'
+    }
+    return render(request, 'campaign/new_thing.html', context)
+
+
+def create_new_npc(request):
+    if request.method == 'POST':
+        form = NewNpcForm(request.POST)
+        if form.is_valid():
+            thing = Thing(name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='NPC'))
+            thing.save()
+
+            new_parents = [form.cleaned_data['location']]
+            new_parents.extend(form.cleaned_data['factions'])
+            for new_parent in new_parents:
+                new_parent.children.add(thing)
+                new_parent.save()
+
+            attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='NPC'), value=form.cleaned_data['attitude'])
+            attitude.save()
+            occupation = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Occupation'), value=form.cleaned_data['occupation'])
+            occupation.save()
+            link = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Link'), value=form.cleaned_data['link'])
+            link.save()
+
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = NewNpcForm()
+
+    context = {
+        'search_form': SearchForm(),
+        'thing_form': form,
+        'thing_type': 'NPC'
+    }
+    return render(request, 'campaign/new_thing.html', context)
