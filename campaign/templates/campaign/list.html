@@ -1,11 +1,63 @@
 {% extends "campaign/base.html" %}
 {% block content %}
 <div class="container">
-    {% for type in types %}
-        <h1>{{ type.name }}</h1>
-        {% for thing in type.things %}
-            {% include "campaign/thing_block.html" %}
+    <div class="row">
+        <div class="col-sm">
+            <div class="btn-toolbar" role="toolbar" aria-label="Filters">
+                {% for filter in filters %}
+                    <div class="btn-group mr-2" role="group" aria-label="{{ filter.name }}">
+                        <div class="btn-group" role="group">
+                            <button id="filter-{{ filter.name }}" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {{ filter.name }}
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="filter-{{ filter.name }}">
+                                {% for value in filter.values %}
+                                    <a id="{{ value.class }}" class="dropdown-item thing-filter" href="#">{{ value.value }}</a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            {% for type in types %}
+                <h1>{{ type.name }}</h1>
+                {% for thing in type.things %}
+                    {% include "campaign/thing_block.html" %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block js_code %}
+<script>
+    {% for filter in filters %}
+        {% for value in filter.values %}
+            $("#{{ value.class }}").click(function() {
+                if ($("#{{ value.class }}").hasClass("active")) {
+                    $("#{{ value.class }}").removeClass("active");
+                }
+                else {
+                    $("#{{ value.class }}").addClass("active");
+                }
+
+                if ($(".thing-filter.active").length == 0) {
+                    $(".thing-block").show();
+                }
+                else {
+                    $(".thing-block").hide();
+                    $(".thing-filter.active").each(function() {
+                        var clss = $(this).attr("id");
+                        $(".thing-block." + clss).show();
+                    });
+                }
+                return false;
+            });
         {% endfor %}
     {% endfor %}
-</div>
+</script>
 {% endblock %}

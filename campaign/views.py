@@ -1,8 +1,10 @@
-import json
+import json, re
 
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.urls import reverse
+from operator import methodcaller
+
 from .models import Thing, ThingType, Attribute, AttributeValue
 from .forms import SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm
 
@@ -59,8 +61,11 @@ def list_all(request, thing_type):
 
     context = {
         'types': list_data,
+        'filters': order_attribute_filters(get_attribute_filters(list_data)),
         'search_form': SearchForm()
     }
+
+    print(context['filters'])
 
     return render(request, 'campaign/list.html', context)
 
@@ -142,14 +147,16 @@ def get_attributes_to_display(thing):
     for attribute_value in attribute_values:
         attributes_to_display.append({
             'name': attribute_value.attribute.name,
-            'value': attribute_value.value
+            'value': attribute_value.value,
+            'js_class': get_js_class(attribute_value.attribute.name, attribute_value.value)
         })
 
     parent_location = get_parent_location(thing)
     if parent_location:
         attributes_to_display.append({
             'name': 'Location',
-            'value': parent_location
+            'value': parent_location,
+            'js_class': get_js_class('Location', parent_location)
         })
     return attributes_to_display
 
@@ -160,6 +167,47 @@ def get_parent_location(thing):
         return None
     else:
         return parents[0].name
+
+
+def get_js_class(name, value):
+    return re.sub(r'\W+', '-', '{0}-{1}'.format(name, value))
+
+
+def get_attribute_filters(list_data):
+    attribute_filter = {}
+
+    for thing_type in list_data:
+        for thing in thing_type['things']:
+            for attribute_value in thing['attributes']:
+                if attribute_value['name'] in attribute_filter:
+                    if attribute_value['value'] not in attribute_filter[attribute_value['name']]:
+                        attribute_filter[attribute_value['name']].append(attribute_value['value'])
+                else:
+                    attribute_filter[attribute_value['name']] = [attribute_value['value']]
+
+    for attribute_name in attribute_filter.keys():
+        values_with_js_classes = []
+        for value in attribute_filter[attribute_name]:
+            values_with_js_classes.append({
+                'value': value,
+                'class': get_js_class(attribute_name, value)
+            })
+        attribute_filter[attribute_name] = values_with_js_classes
+    return attribute_filter
+
+
+def order_attribute_filters(attribute_filters):
+    ordered_filters = []
+    for attribute, values in attribute_filters.items():
+        ordered_filters.append({
+            'name': attribute,
+            'values': values
+        })
+
+    for attribute_filter in ordered_filters:
+        sorted_values = sorted(attribute_filter['values'], key=methodcaller('get', 'value'))
+        attribute_filter['values'] = sorted_values
+    return sorted(ordered_filters, key=methodcaller('get', 'name'))
 
 
 def export(request):

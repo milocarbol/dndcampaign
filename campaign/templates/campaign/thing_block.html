@@ -1,4 +1,4 @@
-<a href="{% url 'campaign:detail' thing.name %}" class="list-group-item list-group-item-action">
+<a href="{% url 'campaign:detail' thing.name %}" class="list-group-item list-group-item-action thing-block {% for attribute in thing.attributes %}{{ attribute.js_class }} {% endfor %}">
     <div>
         <h5 class="mb-1">{{ thing.name }}</h5>
     </div>
