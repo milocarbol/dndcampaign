@@ -390,14 +390,21 @@ def create_new_faction(request):
                 new_parent.children.add(thing)
                 new_parent.save()
 
-            leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'].name)
-            leader.save()
-            attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='Faction'), value=form.cleaned_data['attitude'])
-            attitude.save()
-            power = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Power'), value=form.cleaned_data['power'])
-            power.save()
-            reach = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Reach'), value=form.cleaned_data['reach'])
-            reach.save()
+            if form.cleaned_data['leader']:
+                leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'].name)
+                leader.save()
+
+            if form.cleaned_data['attitude']:
+                attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='Faction'), value=form.cleaned_data['attitude'])
+                attitude.save()
+
+            if form.cleaned_data['power']:
+                power = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Power'), value=form.cleaned_data['power'])
+                power.save()
+
+            if form.cleaned_data['reach']:
+                reach = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Reach'), value=form.cleaned_data['reach'])
+                reach.save()
 
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
@@ -426,14 +433,21 @@ def create_new_npc(request):
                 new_parent.children.add(thing)
                 new_parent.save()
 
-            race = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Race'), value=form.cleaned_data['race'])
-            race.save()
-            attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='NPC'), value=form.cleaned_data['attitude'])
-            attitude.save()
-            occupation = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Occupation'), value=form.cleaned_data['occupation'])
-            occupation.save()
-            link = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Link'), value=form.cleaned_data['link'])
-            link.save()
+            if form.cleaned_data['race']:
+                race = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Race'), value=form.cleaned_data['race'])
+                race.save()
+
+            if form.cleaned_data['attitude']:
+                attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='NPC'), value=form.cleaned_data['attitude'])
+                attitude.save()
+
+            if form.cleaned_data['occupation']:
+                occupation = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Occupation'), value=form.cleaned_data['occupation'])
+                occupation.save()
+
+            if form.cleaned_data['link']:
+                link = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Link'), value=form.cleaned_data['link'])
+                link.save()
 
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:

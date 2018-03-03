@@ -58,5 +58,5 @@ class NewNpcForm(forms.Form):
 
     race = forms.CharField(label='Race')
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
-    occupation = forms.CharField(label='Occupation')
+    occupation = forms.CharField(label='Occupation', required=False)
     link = forms.CharField(label='D&D Beyond URL', required=False)
