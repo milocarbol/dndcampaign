@@ -10,7 +10,15 @@
     <tbody>
         <tr>
             {% for attribute in thing.attributes %}
-                <td class="text-center">{{ attribute.value }}</td>
+                <td class="text-center">
+                    {% if attribute.can_link %}
+                        <a href="{% url 'campaign:detail' attribute.value %}">
+                    {% endif %}
+                    {{ attribute.value }}
+                    {% if attribute.can_link %}
+                        </a>
+                    {% endif %}
+                </td>
             {% endfor %}
         </tr>
     </tbody>

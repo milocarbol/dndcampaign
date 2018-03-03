@@ -22,6 +22,7 @@ class Attribute(models.Model):
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
     display_in_summary = models.BooleanField(default=False)
+    is_thing = models.BooleanField(default=False)
 
     class Meta:
         unique_together = (('thing_type', 'name'),)

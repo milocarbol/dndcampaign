@@ -148,6 +148,7 @@ def get_attributes_to_display(thing):
         attributes_to_display.append({
             'name': attribute_value.attribute.name,
             'value': attribute_value.value,
+            'can_link': attribute_value.attribute.is_thing,
             'js_class': get_js_class(attribute_value.attribute.name, attribute_value.value)
         })
 
@@ -156,6 +157,7 @@ def get_attributes_to_display(thing):
         attributes_to_display.append({
             'name': 'Location',
             'value': parent_location,
+            'can_link': True,
             'js_class': get_js_class('Location', parent_location)
         })
     return attributes_to_display
