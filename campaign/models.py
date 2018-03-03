@@ -28,7 +28,7 @@ class Attribute(models.Model):
         unique_together = (('thing_type', 'name'),)
 
     def __str__(self):
-        return '[' + self.thing_type.name + '] ' + self.name
+        return '[{0}] {1}'.format(self.thing_type.name, self.name)
 
 
 class AttributeValue(models.Model):
@@ -40,4 +40,14 @@ class AttributeValue(models.Model):
         unique_together = (('thing', 'attribute'),)
 
     def __str__(self):
-        return '[' + self.thing.name + '] ' + self.attribute.name + ': ' + self.value
+        return '[{0}] {1}:{2}'.format(self.thing.name, self.attribute.name, self.value)
+
+
+class UsefulLink(models.Model):
+    thing = models.ForeignKey(Thing, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)
+    value = models.CharField(max_length=100)
+
+    def __str__(self):
+        return '[{0}] {1}:{2}'.format(self.thing.name, self.name, self.value)
+

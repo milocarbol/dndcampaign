@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Thing
+from .models import Thing, UsefulLink
 
 
 ATTITUDE_CHOICES = [
@@ -60,3 +60,9 @@ class NewNpcForm(forms.Form):
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
     occupation = forms.CharField(label='Occupation', required=False)
     link = forms.CharField(label='D&D Beyond URL', required=False)
+
+
+class AddLinkForm(forms.Form):
+    name = forms.CharField(label='Name')
+    value = forms.CharField(label='URL')
+

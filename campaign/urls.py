@@ -14,5 +14,6 @@ urlpatterns = [
     path('list/<thing_type>', views.list_all, name='list'),
     path('move/options/<name>', views.move_thing_options, name='move_options'),
     path('move/confirm/<name>/to/<new_location_name>', views.move_thing_confirm, name='move_confirm'),
-    path('new/<thing_type>', views.new_thing, name='new_thing')
+    path('new/<thing_type>', views.new_thing, name='new_thing'),
+    path('add_link/<name>', views.add_link, name='add_link')
 ]

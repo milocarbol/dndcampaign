@@ -5,8 +5,8 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.urls import reverse
 from operator import methodcaller
 
-from .models import Thing, ThingType, Attribute, AttributeValue
-from .forms import SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm
 
 
 def index(request):
@@ -122,7 +122,8 @@ def detail(request, name):
     thing_info = {
         'name': thing.name,
         'description': thing.description,
-        'attributes': get_attributes_to_display(thing)
+        'attributes': get_attributes_to_display(thing),
+        'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name')
     }
 
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
@@ -222,12 +223,19 @@ def export(request):
                 'attribute': attribute_value.attribute.name,
                 'value': attribute_value.value
             })
+        links = []
+        for link in UsefulLink.objects.filter(thing=thing):
+            links.append({
+                'name': link.name,
+                'value': link.value
+            })
         thing_data.append({
             'name': thing.name,
             'description': thing.description,
             'thing_type': thing.thing_type.name,
             'children': [child.name for child in thing.children.all()],
-            'attribute_values': attributes
+            'attribute_values': attributes,
+            'links': links
         })
 
     data = {
@@ -267,6 +275,10 @@ def save_campaign(json_file):
         for attribute in thing['attribute_values']:
             attr_value_object = AttributeValue(thing=thing_object, attribute=Attribute.objects.get(name=attribute['attribute'], thing_type=thing_object.thing_type), value=attribute['value'])
             attr_value_object.save()
+
+        for link in thing['links']:
+            link_object = UsefulLink(thing=thing_object, name=link['name'], value=link['value'])
+            link_object.save()
 
     for thing in data['things']:
         thing_object = Thing.objects.get(name=thing['name'])
@@ -459,3 +471,28 @@ def create_new_npc(request):
         'thing_type': 'NPC'
     }
     return render(request, 'campaign/new_thing.html', context)
+
+
+def add_link(request, name):
+    try:
+        thing = Thing.objects.get(name=name)
+    except Thing.DoesNotExist:
+        raise Http404
+
+    if request.method == 'POST':
+        form = AddLinkForm(request.POST)
+        if form.is_valid():
+            link = UsefulLink(thing=thing, name=form.cleaned_data['name'], value=form.cleaned_data['value'])
+            link.save()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = AddLinkForm()
+
+    context = {
+        'thing': {
+            'name': thing.name
+        },
+        'search_form': SearchForm(),
+        'form': form
+    }
+    return render(request, 'campaign/add_link.html', context)

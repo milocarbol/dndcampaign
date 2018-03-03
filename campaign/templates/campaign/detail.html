@@ -8,6 +8,28 @@
             <p>{{ thing.description }}</p>
         </div>
     </div>
+    {% if thing.useful_links %}
+        <div class="row">
+            <div class="col-sm-4">
+                <table class="table table-bordered table-sm">
+                    <thead>
+                        <tr>
+                            <th scope="row">Links</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for link in thing.useful_links %}
+                            <tr>
+                                <td>
+                                    <a href="{{ link.value }}" target="_blank">{{ link.name }}</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
     <div class="row">
         <div class="col-sm text-right">
             <div class="btn-group dropleft">
@@ -16,6 +38,7 @@
                 </button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                     <a class="dropdown-item" href="{% url 'campaign:move_options' thing.name %}">Move</a>
+                    <a class="dropdown-item" href="{% url 'campaign:add_link' thing.name %}">Add link</a>
                 </div>
             </div>
         </div>
