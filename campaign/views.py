@@ -390,10 +390,6 @@ def create_new_faction(request):
             thing.save()
 
             for child in form.cleaned_data['npcs']:
-                current_parent_locations = Thing.objects.filter(children=child, thing_type__name='Location')
-                for parent in current_parent_locations:
-                    parent.children.remove(child)
-                    parent.save()
                 thing.children.add(child)
             thing.save()
 
