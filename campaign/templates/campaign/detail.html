@@ -5,7 +5,7 @@
         <div class="col-sm">
             <h1>{{ thing.name }}{% if thing.link %} <a href="{{ thing.link }}" class="badge badge-pill badge-danger" target="_blank">D&D Beyond</a>{% endif %}</h1>
             {% include "campaign/summary_table.html" %}
-            <p>{{ thing.description }}</p>
+            <p class="thing-description">{{ thing.description }}</p>
         </div>
     </div>
     {% if thing.useful_links %}
