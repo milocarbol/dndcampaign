@@ -15,5 +15,6 @@ urlpatterns = [
     path('move/options/<name>', views.move_thing_options, name='move_options'),
     path('move/confirm/<name>/to/<new_location_name>', views.move_thing_confirm, name='move_confirm'),
     path('new/<thing_type>', views.new_thing, name='new_thing'),
-    path('add_link/<name>', views.add_link, name='add_link')
+    path('add_link/<name>', views.add_link, name='add_link'),
+    path('change_campaign/<name>', views.change_campaign, name='change_campaign')
 ]

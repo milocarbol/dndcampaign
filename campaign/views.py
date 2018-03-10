@@ -1,11 +1,11 @@
 import json, re
 
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.urls import reverse
 from operator import methodcaller
 
-from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign
 from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm
 
 
@@ -16,13 +16,14 @@ def index(request):
 
 
 def search(request):
+    campaign = Campaign.objects.get(is_active=True)
     form = SearchForm(request.POST)
     if form.is_valid():
-        return go_to_closest_thing(form.cleaned_data['search_text'])
+        return go_to_closest_thing(campaign=campaign, name=form.cleaned_data['search_text'])
 
 
-def go_to_closest_thing(name):
-    results = Thing.objects.filter(name__icontains=name)
+def go_to_closest_thing(campaign, name):
+    results = Thing.objects.filter(campaign=campaign, name__icontains=name)
     if len(results) == 0:
         raise Http404('"{0}" does not exist.'.format(name))
     elif len(results) == 1:
@@ -39,6 +40,8 @@ def go_to_closest_thing(name):
 
 
 def list_all(request, thing_type):
+    campaign = Campaign.objects.get(is_active=True)
+
     if thing_type:
         types = [thing_type]
     else:
@@ -48,11 +51,11 @@ def list_all(request, thing_type):
 
     for t in types:
         data_for_type = []
-        for thing in Thing.objects.filter(thing_type__name__iexact=t).order_by('name'):
+        for thing in Thing.objects.filter(campaign=campaign, thing_type__name__iexact=t).order_by('name'):
             data_for_type.append({
                 'name': thing.name,
                 'description': thing.description,
-                'attributes': get_attributes_to_display(thing)
+                'attributes': get_attributes_to_display(campaign=campaign, thing=thing)
             })
         list_data.append({
             'name': '{0}s'.format(t),
@@ -61,6 +64,8 @@ def list_all(request, thing_type):
 
     context = {
         'types': list_data,
+        'campaign': campaign.name,
+        'campaigns': [c.name for c in Campaign.objects.all()],
         'filters': order_attribute_filters(get_attribute_filters(list_data)),
         'search_form': SearchForm()
     }
@@ -73,25 +78,26 @@ def list_everything(request):
 
 
 def detail(request, name):
+    campaign = Campaign.objects.get(is_active=True)
     try:
-        thing = Thing.objects.get(name=name)
+        thing = Thing.objects.get(campaign=campaign, name=name)
     except Thing.DoesNotExist:
-        return go_to_closest_thing(name)
+        return go_to_closest_thing(campaign=campaign, name=name)
 
     parent_locations = []
     parent_factions = []
-    for parent in Thing.objects.filter(children=thing).order_by('name'):
+    for parent in Thing.objects.filter(campaign=campaign, children=thing).order_by('name'):
         if parent.thing_type.name == 'Location':
             parent_locations.append({
                 'name': parent.name,
                 'description': parent.description,
-                'attributes': get_attributes_to_display(parent)
+                'attributes': get_attributes_to_display(campaign=campaign, thing=parent)
             })
         elif parent.thing_type.name == 'Faction':
             parent_factions.append({
                 'name': parent.name,
                 'description': parent.description,
-                'attributes': get_attributes_to_display(parent)
+                'attributes': get_attributes_to_display(campaign=campaign, thing=parent)
             })
 
     child_locations = []
@@ -102,25 +108,25 @@ def detail(request, name):
             child_locations.append({
                 'name': child.name,
                 'description': child.description,
-                'attributes': get_attributes_to_display(child)
+                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
             })
         elif child.thing_type.name == 'Faction':
             child_factions.append({
                 'name': child.name,
                 'description': child.description,
-                'attributes': get_attributes_to_display(child)
+                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
             })
         elif child.thing_type.name == 'NPC':
             child_npcs.append({
                 'name': child.name,
                 'description': child.description,
-                'attributes': get_attributes_to_display(child)
+                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
             })
 
     thing_info = {
         'name': thing.name,
         'description': thing.description,
-        'attributes': get_attributes_to_display(thing),
+        'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name')
     }
 
@@ -130,6 +136,8 @@ def detail(request, name):
 
     context = {
         'thing': thing_info,
+        'campaign': campaign.name,
+        'campaigns': [c.name for c in Campaign.objects.all()],
         'parent_locations': parent_locations,
         'parent_factions': parent_factions,
         'child_locations': child_locations,
@@ -140,7 +148,7 @@ def detail(request, name):
     return render(request, 'campaign/detail.html', context)
 
 
-def get_attributes_to_display(thing):
+def get_attributes_to_display(campaign, thing):
     attributes_to_display = []
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=True).order_by('attribute__name')
     for attribute_value in attribute_values:
@@ -151,7 +159,7 @@ def get_attributes_to_display(thing):
             'js_class': get_js_class(attribute_value.attribute.name, attribute_value.value)
         })
 
-    parent_location = get_parent_location(thing)
+    parent_location = get_parent_location(campaign=campaign, thing=thing)
     if parent_location:
         attributes_to_display.append({
             'name': 'Location',
@@ -159,12 +167,11 @@ def get_attributes_to_display(thing):
             'can_link': True,
             'js_class': get_js_class('Location', parent_location)
         })
-    print(attributes_to_display)
     return attributes_to_display
 
 
-def get_parent_location(thing):
-    parents = Thing.objects.filter(children=thing, thing_type__name='Location').order_by('name')
+def get_parent_location(campaign, thing):
+    parents = Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location').order_by('name')
     if len(parents) == 0:
         return None
     else:
@@ -213,8 +220,9 @@ def order_attribute_filters(attribute_filters):
 
 
 def export(request):
+    campaign = Campaign.objects.get(is_active=True)
     thing_data = []
-    for thing in Thing.objects.all():
+    for thing in Thing.objects.filter(campaign=campaign):
         attributes = []
         attribute_values = AttributeValue.objects.filter(thing=thing)
         for attribute_value in attribute_values:
@@ -248,27 +256,31 @@ def export(request):
 
 
 def import_campaign(request):
+    campaign = Campaign.objects.get(is_active=True)
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
-            save_campaign(request.FILES['file'].read().decode('UTF-8'))
+            save_campaign(campaign=campaign, json_file=request.FILES['file'].read().decode('UTF-8'))
             return HttpResponseRedirect('/campaign')
         else:
             print(request.POST)
     else:
+
         context = {
+            'campaign': campaign.name,
+            'campaigns': [c.name for c in Campaign.objects.all()],
             'search_form': SearchForm(),
             'form': UploadFileForm()
         }
         return render(request, 'campaign/import.html', context)
 
 
-def save_campaign(json_file):
-    Thing.objects.all().delete()
+def save_campaign(campaign, json_file):
+    Thing.objects.filter(campaign=campaign).delete()
     AttributeValue.objects.all().delete()
     data = json.loads(json_file)
     for thing in data['things']:
-        thing_object = Thing(name=thing['name'], description=thing['description'], thing_type=ThingType.objects.get(name=thing['thing_type']))
+        thing_object = Thing(campaign=campaign, name=thing['name'], description=thing['description'], thing_type=ThingType.objects.get(name=thing['thing_type']))
         thing_object.save()
 
         for attribute in thing['attribute_values']:
@@ -280,31 +292,34 @@ def save_campaign(json_file):
             link_object.save()
 
     for thing in data['things']:
-        thing_object = Thing.objects.get(name=thing['name'])
+        thing_object = Thing.objects.get(campaign=campaign, name=thing['name'])
         for child in thing['children']:
-            thing_object.children.add(Thing.objects.get(name=child))
+            thing_object.children.add(Thing.objects.get(campaign=campaign, name=child))
         thing_object.save()
 
 
 def move_thing_options(request, name):
+    campaign = Campaign.objects.get(is_active=True)
     try:
-        thing = Thing.objects.get(name=name)
+        thing = Thing.objects.get(campaign=campaign, name=name)
     except Thing.DoesNotExist:
         raise Http404
 
-    current_locations = Thing.objects.filter(children=thing, thing_type__name='Location')
+    current_locations = Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location')
     if len(current_locations) == 0:
         current_location = None
     else:
         current_location = current_locations[0].name
 
-    options = [location.name for location in Thing.objects.filter(thing_type__name='Location').order_by('name')]
+    options = [location.name for location in Thing.objects.filter(campaign=campaign, thing_type__name='Location').order_by('name')]
 
     context = {
         'thing': {
             'name': thing.name,
             'location': current_location
         },
+        'campaign': campaign.name,
+        'campaigns': [c.name for c in Campaign.objects.all()],
         'options': options,
         'search_form': SearchForm()
     }
@@ -313,16 +328,18 @@ def move_thing_options(request, name):
 
 
 def move_thing_confirm(request, name, new_location_name):
+    campaign = Campaign.objects.get(is_active=True)
+
     try:
-        thing = Thing.objects.get(name=name)
+        thing = Thing.objects.get(campaign=campaign, name=name)
         if new_location_name == 'CLEAR':
             new_location = None
         else:
-            new_location = Thing.objects.get(name=new_location_name)
+            new_location = Thing.objects.get(campaign=campaign, name=new_location_name)
     except Thing.DoesNotExist:
         raise Http404
 
-    for old_location in Thing.objects.filter(children=thing, thing_type__name='Location'):
+    for old_location in Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location'):
         old_location.children.remove(thing)
         old_location.save()
 
@@ -345,10 +362,11 @@ def new_thing(request, thing_type):
 
 
 def create_new_location(request):
+    campaign = Campaign.objects.get(is_active=True)
     if request.method == 'POST':
         form = NewLocationForm(request.POST)
         if form.is_valid():
-            thing = Thing(name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Location'))
+            thing = Thing(campaign=campaign, name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Location'))
             thing.save()
 
             children = []
@@ -356,7 +374,7 @@ def create_new_location(request):
             children.extend(form.cleaned_data['npcs'])
 
             for child in children:
-                current_parent_locations = Thing.objects.filter(children=child, thing_type__name='Location')
+                current_parent_locations = Thing.objects.filter(campaign=campaign, children=child, thing_type__name='Location')
                 for parent in current_parent_locations:
                     parent.children.remove(child)
                     parent.save()
@@ -373,8 +391,12 @@ def create_new_location(request):
     else:
         form = NewLocationForm()
 
+    form.refresh_fields()
+
     context = {
         'search_form': SearchForm(),
+        'campaign': campaign.name,
+        'campaigns': [c.name for c in Campaign.objects.all()],
         'thing_form': form,
         'thing_type': 'Location'
     }
@@ -382,10 +404,11 @@ def create_new_location(request):
 
 
 def create_new_faction(request):
+    campaign = Campaign.objects.get(is_active=True)
     if request.method == 'POST':
         form = NewFactionForm(request.POST)
         if form.is_valid():
-            thing = Thing(name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Faction'))
+            thing = Thing(campaign=campaign, name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Faction'))
             thing.save()
 
             for child in form.cleaned_data['npcs']:
@@ -417,8 +440,12 @@ def create_new_faction(request):
     else:
         form = NewFactionForm()
 
+    form.refresh_fields()
+
     context = {
         'search_form': SearchForm(),
+        'campaign': campaign.name,
+        'campaigns': [c.name for c in Campaign.objects.all()],
         'thing_form': form,
         'thing_type': 'Faction'
     }
@@ -426,10 +453,11 @@ def create_new_faction(request):
 
 
 def create_new_npc(request):
+    campaign = Campaign.objects.get(is_active=True)
     if request.method == 'POST':
         form = NewNpcForm(request.POST)
         if form.is_valid():
-            thing = Thing(name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='NPC'))
+            thing = Thing(campaign=campaign, name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='NPC'))
             thing.save()
 
             new_parents = []
@@ -460,8 +488,12 @@ def create_new_npc(request):
     else:
         form = NewNpcForm()
 
+    form.refresh_fields()
+
     context = {
         'search_form': SearchForm(),
+        'campaign': campaign.name,
+        'campaigns': [c.name for c in Campaign.objects.all()],
         'thing_form': form,
         'thing_type': 'NPC'
     }
@@ -469,8 +501,9 @@ def create_new_npc(request):
 
 
 def add_link(request, name):
+    campaign = Campaign.objects.get(is_active=True)
     try:
-        thing = Thing.objects.get(name=name)
+        thing = Thing.objects.get(campaign=campaign, name=name)
     except Thing.DoesNotExist:
         raise Http404
 
@@ -487,7 +520,21 @@ def add_link(request, name):
         'thing': {
             'name': thing.name
         },
+        'campaign': campaign.name,
+        'campaigns': [c.name for c in Campaign.objects.all()],
         'search_form': SearchForm(),
         'form': form
     }
     return render(request, 'campaign/add_link.html', context)
+
+
+def change_campaign(request, name):
+    new_campaign = get_object_or_404(Campaign, name=name)
+    old_campaign = Campaign.objects.get(is_active=True)
+
+    old_campaign.is_active = False
+    old_campaign.save()
+    new_campaign.is_active = True
+    new_campaign.save()
+
+    return HttpResponseRedirect(reverse('campaign:list_everything'))

@@ -3,9 +3,10 @@ from django.db import models
 
 class Campaign(models.Model):
     name = models.CharField(max_length=50, unique=True)
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.name
+        return '{0} (active={1})'.format(self.name, self.is_active)
 
 
 class ThingType(models.Model):

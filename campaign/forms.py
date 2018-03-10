@@ -27,9 +27,14 @@ class UploadFileForm(forms.Form):
 class NewLocationForm(forms.Form):
     name = forms.CharField(label='Name')
     description = forms.CharField(label='Description', widget=forms.Textarea)
-    location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.filter(thing_type__name='Location').order_by('name'), required=False)
-    factions = forms.ModelMultipleChoiceField(label='Factions', queryset=Thing.objects.filter(thing_type__name='Faction').order_by('name'), required=False)
-    npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.filter(thing_type__name='NPC').order_by('name'), required=False)
+    location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
+    factions = forms.ModelMultipleChoiceField(label='Factions', queryset=Thing.objects.all(), required=False)
+    npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
+
+    def refresh_fields(self):
+        self.fields['location'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')
+        self.fields['factions'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Faction').order_by('name')
+        self.fields['npcs'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='NPC').order_by('name')
 
 
 class NewFactionForm(forms.Form):
@@ -41,25 +46,34 @@ class NewFactionForm(forms.Form):
 
     name = forms.CharField(label='Name')
     description = forms.CharField(label='Description', widget=forms.Textarea)
-    location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.filter(thing_type__name='Location').order_by('name'), required=False)
-    npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.filter(thing_type__name='NPC').order_by('name'), required=False)
+    location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
+    npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
 
-    leader = forms.ModelChoiceField(label='Leader', queryset=Thing.objects.filter(thing_type__name='NPC').order_by('name'))
+    leader = forms.ModelChoiceField(label='Leader', queryset=Thing.objects.all())
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
     power = forms.ChoiceField(label='Power', choices=MAGNITUDE_CHOICES)
     reach = forms.ChoiceField(label='Reach', choices=MAGNITUDE_CHOICES)
+
+    def refresh_fields(self):
+        self.fields['location'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')
+        self.fields['npcs'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='NPC').order_by('name')
+        self.fields['leader'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='NPC').order_by('name')
 
 
 class NewNpcForm(forms.Form):
     name = forms.CharField(label='Name')
     description = forms.CharField(label='Description', widget=forms.Textarea)
-    location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.filter(thing_type__name='Location').order_by('name'), required=False)
-    factions = forms.ModelMultipleChoiceField(label='Member of', queryset=Thing.objects.filter(thing_type__name='Faction').order_by('name'), required=False)
+    location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
+    factions = forms.ModelMultipleChoiceField(label='Member of', queryset=Thing.objects.all(), required=False)
 
     race = forms.CharField(label='Race')
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
     occupation = forms.CharField(label='Occupation', required=False)
     link = forms.CharField(label='D&D Beyond URL', required=False)
+
+    def refresh_fields(self):
+        self.fields['location'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')
+        self.fields['factions'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Faction').order_by('name')
 
 
 class AddLinkForm(forms.Form):
