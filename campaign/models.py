@@ -1,6 +1,13 @@
 from django.db import models
 
 
+class Campaign(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class ThingType(models.Model):
     name = models.CharField(max_length=10, unique=True)
 
@@ -9,6 +16,7 @@ class ThingType(models.Model):
 
 
 class Thing(models.Model):
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField()
     children = models.ManyToManyField('self', blank=True, symmetrical=False)

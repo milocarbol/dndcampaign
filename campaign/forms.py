@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Thing, UsefulLink
+from .models import Thing, UsefulLink, Campaign
 
 
 ATTITUDE_CHOICES = [
@@ -65,4 +65,8 @@ class NewNpcForm(forms.Form):
 class AddLinkForm(forms.Form):
     name = forms.CharField(label='Name')
     value = forms.CharField(label='URL')
+
+
+class ChangeCampaignForm(forms.Form):
+    campaign = forms.ModelChoiceField(queryset=Campaign.objects.all())
 

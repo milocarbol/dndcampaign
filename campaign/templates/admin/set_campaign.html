@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<form action="{{ path }}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="change_campaign" />
+    <input type="hidden" name="do_action" value="yes">
+
+    <div>
+        {{ form.campaign }}
+        <input type="submit" name="apply" value="Change campaign"/>
+        {{ form.campaign.errors }}
+    </div>
+    <ul>
+        {% for thing in things %}
+            <li>
+                {{ thing.name }}
+                <input type="hidden" name="_selected_action" value="{{ thing.pk }}" />
+            </li>
+        {% endfor %}
+    </ul>
+</form>
+{% endblock %}

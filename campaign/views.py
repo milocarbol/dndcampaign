@@ -65,8 +65,6 @@ def list_all(request, thing_type):
         'search_form': SearchForm()
     }
 
-    print(context['filters'])
-
     return render(request, 'campaign/list.html', context)
 
 
@@ -161,6 +159,7 @@ def get_attributes_to_display(thing):
             'can_link': True,
             'js_class': get_js_class('Location', parent_location)
         })
+    print(attributes_to_display)
     return attributes_to_display
 
 
