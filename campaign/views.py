@@ -65,7 +65,7 @@ def list_all(request, thing_type):
     context = {
         'types': list_data,
         'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all()],
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'filters': order_attribute_filters(get_attribute_filters(list_data)),
         'search_form': SearchForm()
     }
@@ -137,7 +137,7 @@ def detail(request, name):
     context = {
         'thing': thing_info,
         'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all()],
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'parent_locations': parent_locations,
         'parent_factions': parent_factions,
         'child_locations': child_locations,
@@ -268,7 +268,7 @@ def import_campaign(request):
 
         context = {
             'campaign': campaign.name,
-            'campaigns': [c.name for c in Campaign.objects.all()],
+            'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
             'search_form': SearchForm(),
             'form': UploadFileForm()
         }
@@ -319,7 +319,7 @@ def move_thing_options(request, name):
             'location': current_location
         },
         'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all()],
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'options': options,
         'search_form': SearchForm()
     }
@@ -396,7 +396,7 @@ def create_new_location(request):
     context = {
         'search_form': SearchForm(),
         'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all()],
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'thing_form': form,
         'thing_type': 'Location'
     }
@@ -445,7 +445,7 @@ def create_new_faction(request):
     context = {
         'search_form': SearchForm(),
         'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all()],
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'thing_form': form,
         'thing_type': 'Faction'
     }
@@ -493,7 +493,7 @@ def create_new_npc(request):
     context = {
         'search_form': SearchForm(),
         'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all()],
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'thing_form': form,
         'thing_type': 'NPC'
     }
@@ -521,7 +521,7 @@ def add_link(request, name):
             'name': thing.name
         },
         'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all()],
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'search_form': SearchForm(),
         'form': form
     }
