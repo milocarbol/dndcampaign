@@ -7,7 +7,7 @@
                 {% for filter in filters %}
                     <div class="btn-group mr-2" role="group" aria-label="{{ filter.name }}">
                         <div class="btn-group" role="group">
-                            <button id="filter-{{ filter.name }}" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <button id="filter-{{ filter.name }}" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 {{ filter.name }}
                             </button>
                             <div class="dropdown-menu" aria-labelledby="filter-{{ filter.name }}">
@@ -18,6 +18,7 @@
                         </div>
                     </div>
                 {% endfor %}
+                <button id="match-button" type="button" class="btn btn-secondary match-by-or">Match all</button>
             </div>
         </div>
     </div>
@@ -35,6 +36,27 @@
 {% endblock %}
 {% block js_code %}
 <script>
+    function evaluateFilters() {
+        if ($(".thing-filter.active").length == 0) {
+            $(".thing-block").show();
+        }
+        else {
+            $(".thing-block").hide();
+            if ($("#match-button").hasClass("match-by-or")) {
+                $(".thing-filter.active").each(function() {
+                    var clss = $(this).attr("id");
+                    $(".thing-block." + clss).show();
+                });
+            }
+            else {
+                var clsses = "";
+                $(".thing-filter.active").each(function() {
+                    clsses += "." + $(this).attr("id");
+                });
+                $(".thing-block" + clsses).show();
+            }
+        }
+    }
     {% for filter in filters %}
         {% for value in filter.values %}
             $("#{{ value.class }}").click(function() {
@@ -45,19 +67,23 @@
                     $("#{{ value.class }}").addClass("active");
                 }
 
-                if ($(".thing-filter.active").length == 0) {
-                    $(".thing-block").show();
-                }
-                else {
-                    $(".thing-block").hide();
-                    $(".thing-filter.active").each(function() {
-                        var clss = $(this).attr("id");
-                        $(".thing-block." + clss).show();
-                    });
-                }
+                evaluateFilters();
                 return false;
             });
         {% endfor %}
     {% endfor %}
+    $("#match-button").click(function() {
+        if ($("#match-button").hasClass("match-by-or")) {
+            $("#match-button").removeClass("match-by-or");
+            $("#match-button").addClass("match-by-and");
+            $("#match-button").text("Match any");
+        }
+        else {
+            $("#match-button").removeClass("match-by-and");
+            $("#match-button").addClass("match-by-or");
+            $("#match-button").text("Match all");
+        }
+        evaluateFilters();
+    });
 </script>
 {% endblock %}
