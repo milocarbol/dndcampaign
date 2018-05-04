@@ -5,7 +5,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.urls import reverse
 from operator import methodcaller
 
-from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType
 from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm
 
 
@@ -123,11 +123,18 @@ def detail(request, name):
                 'attributes': get_attributes_to_display(campaign=campaign, thing=child)
             })
 
+    creatures = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name='Creature')
+    obstacles = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name='Obstacle')
+    npc_encounters = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name='NPC')
+
     thing_info = {
         'name': thing.name,
         'description': thing.description,
         'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
-        'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name')
+        'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
+        'creatures': {'count': len(creatures), 'list': creatures},
+        'obstacles': {'count': len(obstacles), 'list': obstacles},
+        'npc_encounters': {'count': len(npc_encounters), 'list': npc_encounters}
     }
 
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
@@ -236,13 +243,20 @@ def export(request):
                 'name': link.name,
                 'value': link.value
             })
+        random_encounters = []
+        for random_encounter in RandomEncounter.objects.filter(thing=thing):
+            random_encounters.append({
+                'random_encounter_type': random_encounter.random_encounter_type.name,
+                'name': random_encounter.name
+            })
         thing_data.append({
             'name': thing.name,
             'description': thing.description,
             'thing_type': thing.thing_type.name,
             'children': [child.name for child in thing.children.all()],
             'attribute_values': attributes,
-            'links': links
+            'links': links,
+            'random_encounters': random_encounters
         })
 
     data = {
@@ -290,6 +304,10 @@ def save_campaign(campaign, json_file):
         for link in thing['links']:
             link_object = UsefulLink(thing=thing_object, name=link['name'], value=link['value'])
             link_object.save()
+
+        for random_encounter in thing['random_encounters']:
+            random_encounter_object = RandomEncounter(thing=thing_object, random_encounter_type=RandomEncounterType.objects.get(name=random_encounter['random_encounter_type']), name=random_encounter['name'])
+            random_encounter_object.save()
 
     for thing in data['things']:
         thing_object = Thing.objects.get(campaign=campaign, name=thing['name'])

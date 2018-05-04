@@ -60,3 +60,21 @@ class UsefulLink(models.Model):
     def __str__(self):
         return '[{0}] {1}:{2}'.format(self.thing.name, self.name, self.value)
 
+
+class RandomEncounterType(models.Model):
+    name = models.CharField(max_length=10, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class RandomEncounter(models.Model):
+    thing = models.ForeignKey(Thing, on_delete=models.CASCADE)
+    random_encounter_type = models.ForeignKey(RandomEncounterType, on_delete=models.CASCADE, null=True)
+    name = models.CharField(max_length=50)
+
+    class Meta:
+        unique_together = (('thing', 'random_encounter_type', 'name'),)
+
+    def __str__(self):
+        return '[{0}] {1}:{2}'.format(self.thing.name, self.random_encounter_type.name, self.name)

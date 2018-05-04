@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from .forms import ChangeCampaignForm
-from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, Campaign
+from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounterType, RandomEncounter
 
 
 class ThingAdmin(admin.ModelAdmin):
@@ -37,3 +37,5 @@ admin.site.register(Attribute)
 admin.site.register(AttributeValue)
 admin.site.register(UsefulLink)
 admin.site.register(Campaign)
+admin.site.register(RandomEncounterType)
+admin.site.register(RandomEncounter)
