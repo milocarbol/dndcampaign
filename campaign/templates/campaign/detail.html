@@ -30,80 +30,34 @@
             </div>
         </div>
     {% endif %}
-    {% if thing.creatures.list or thing.obstacles.list or thing.npc_encounters.list %}
+    {% if thing.display_encounters %}
         <div class="row">
-            {% if thing.creatures.list %}
-                <div class="col-sm-4">
-                    <table class="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th scope="row">d{{ thing.creatures.count }}</th>
-                                <th scope="row">Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for creature in thing.creatures.list %}
+            {% for encounter_type in thing.encounters %}
+                {% if encounter_type.list %}
+                    <div class="col-sm-4">
+                        <table class="table table-bordered table-sm">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        {{ forloop.counter }}
-                                    </td>
-                                    <td>
-                                        {{ creature.name }}
-                                    </td>
+                                    <th scope="row">d{{ encounter_type.count }}</th>
+                                    <th scope="row">Result</th>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
-            {% if thing.obstacles.list %}
-                <div class="col-sm-4">
-                    <table class="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th scope="row">d{{ thing.obstacles.count }}</th>
-                                <th scope="row">Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for obstacle in thing.obstacles.list %}
-                                <tr>
-                                    <td>
-                                        {{ forloop.counter }}
-                                    </td>
-                                    <td>
-                                        {{ obstacle.name }}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
-            {% if thing.npc_encounters.list %}
-                <div class="col-sm-4">
-                    <table class="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th scope="row">d{{ thing.npc_encounters.count }}</th>
-                                <th scope="row">Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for npc in thing.npc_encounters.list %}
-                                <tr>
-                                    <td>
-                                        {{ forloop.counter }}
-                                    </td>
-                                    <td>
-                                        {{ npc.name }}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
+                            </thead>
+                            <tbody>
+                                {% for encounter in encounter_type.list %}
+                                    <tr>
+                                        <td>
+                                            {{ forloop.counter }}
+                                        </td>
+                                        <td>
+                                            {{ encounter.name }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            {% endfor %}
         </div>
     {% endif %}
     <div class="row">
@@ -115,6 +69,9 @@
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                     <a class="dropdown-item" href="{% url 'campaign:move_options' thing.name %}">Move</a>
                     <a class="dropdown-item" href="{% url 'campaign:add_link' thing.name %}">Add link</a>
+                    {% for encounter_type in thing.encounters %}
+                        <a class="dropdown-item" href="{% url 'campaign:edit_encounters' thing.name encounter_type.encounter_type %}">Edit random {{ encounter_type.encounter_type }} encounters</a>
+                    {% endfor %}
                 </div>
             </div>
         </div>

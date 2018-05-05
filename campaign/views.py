@@ -6,7 +6,7 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm
 
 
 def index(request):
@@ -123,18 +123,27 @@ def detail(request, name):
                 'attributes': get_attributes_to_display(campaign=campaign, thing=child)
             })
 
-    creatures = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name='Creature')
-    obstacles = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name='Obstacle')
-    npc_encounters = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name='NPC')
+    encounter_types = [t.name for t in RandomEncounterType.objects.all()]
+    encounter_types.sort()
+    encounters = []
+    display_encounters = False
+    for encounter_type in encounter_types:
+        random_encounters = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name=encounter_type)
+        if random_encounters:
+            display_encounters = True
+        encounters.append({
+            'count': len(random_encounters),
+            'encounter_type': encounter_type,
+            'list': random_encounters
+        })
 
     thing_info = {
         'name': thing.name,
         'description': thing.description,
         'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
-        'creatures': {'count': len(creatures), 'list': creatures},
-        'obstacles': {'count': len(obstacles), 'list': obstacles},
-        'npc_encounters': {'count': len(npc_encounters), 'list': npc_encounters}
+        'encounters': encounters,
+        'display_encounters': display_encounters
     }
 
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
@@ -544,6 +553,32 @@ def add_link(request, name):
         'form': form
     }
     return render(request, 'campaign/add_link.html', context)
+
+
+def edit_random_encounters(request, name, type_name):
+    thing = Thing.objects.get(name=name)
+    random_encounter_type = RandomEncounterType.objects.get(name=type_name)
+    random_encounters = RandomEncounter.objects.filter(thing=thing, random_encounter_type=random_encounter_type)
+
+    if request.method == 'POST':
+        form = EditEncountersForm(request.POST)
+        if form.is_valid():
+            random_encounters.delete()
+            for name in form.cleaned_data['encounters'].split('\n'):
+                if name:
+                    random_encounter = RandomEncounter(thing=thing, name=name, random_encounter_type=random_encounter_type)
+                    random_encounter.save()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = EditEncountersForm({'name': name, 'encounters': '\n'.join([e.name for e in random_encounters])})
+
+    context = {
+        'thing': thing,
+        'encounter_type': type_name,
+        'form': form,
+        'search_form': SearchForm()
+    }
+    return render(request, 'campaign/edit_encounters.html', context)
 
 
 def change_campaign(request, name):

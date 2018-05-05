@@ -81,6 +81,11 @@ class AddLinkForm(forms.Form):
     value = forms.CharField(label='URL')
 
 
+class EditEncountersForm(forms.Form):
+    name = forms.HiddenInput()
+    encounters = forms.CharField(label='Encounters', widget=forms.Textarea, required=False)
+
+
 class ChangeCampaignForm(forms.Form):
     campaign = forms.ModelChoiceField(queryset=Campaign.objects.all())
 
