@@ -136,14 +136,15 @@ def detail(request, name):
             'encounter_type': encounter_type,
             'list': random_encounters
         })
-
+    
     thing_info = {
         'name': thing.name,
         'description': thing.description,
         'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
         'encounters': encounters,
-        'display_encounters': display_encounters
+        'display_encounters': display_encounters,
+        'enable_random_encounters': thing.thing_type.name == 'Location'
     }
 
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')

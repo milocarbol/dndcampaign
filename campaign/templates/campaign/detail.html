@@ -69,9 +69,11 @@
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                     <a class="dropdown-item" href="{% url 'campaign:move_options' thing.name %}">Move</a>
                     <a class="dropdown-item" href="{% url 'campaign:add_link' thing.name %}">Add link</a>
-                    {% for encounter_type in thing.encounters %}
-                        <a class="dropdown-item" href="{% url 'campaign:edit_encounters' thing.name encounter_type.encounter_type %}">Edit random {{ encounter_type.encounter_type }} encounters</a>
-                    {% endfor %}
+                    {% if thing.enable_random_encounters %}
+                        {% for encounter_type in thing.encounters %}
+                            <a class="dropdown-item" href="{% url 'campaign:edit_encounters' thing.name encounter_type.encounter_type %}">Edit random {{ encounter_type.encounter_type }} encounters</a>
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
         </div>
