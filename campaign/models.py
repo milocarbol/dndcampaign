@@ -18,10 +18,13 @@ class ThingType(models.Model):
 
 class Thing(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True)
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
     description = models.TextField()
     children = models.ManyToManyField('self', blank=True, symmetrical=False)
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE, null=True)
+
+    class Meta:
+        unique_together = (('campaign', 'name'),)
 
     def __str__(self):
         return self.name

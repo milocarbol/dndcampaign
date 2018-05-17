@@ -89,3 +89,7 @@ class EditEncountersForm(forms.Form):
 class ChangeCampaignForm(forms.Form):
     campaign = forms.ModelChoiceField(queryset=Campaign.objects.all())
 
+
+class CopyToCampaignForm(forms.Form):
+    campaign = forms.ModelChoiceField(queryset=Campaign.objects.all())
+    copy_children = forms.BooleanField(required=False)

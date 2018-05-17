@@ -557,7 +557,12 @@ def add_link(request, name):
 
 
 def edit_random_encounters(request, name, type_name):
-    thing = Thing.objects.get(name=name)
+    campaign = Campaign.objects.get(is_active=True)
+    try:
+        thing = Thing.objects.get(campaign=campaign, name=name)
+    except Thing.DoesNotExist:
+        raise Http404
+
     random_encounter_type = RandomEncounterType.objects.get(name=type_name)
     random_encounters = RandomEncounter.objects.filter(thing=thing, random_encounter_type=random_encounter_type)
 
