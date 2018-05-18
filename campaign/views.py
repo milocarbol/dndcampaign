@@ -6,7 +6,7 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm
 
 
 def index(request):
@@ -593,6 +593,30 @@ def edit_random_encounters(request, name, type_name):
         'search_form': SearchForm()
     }
     return render(request, 'campaign/edit_encounters.html', context)
+
+
+def edit_description(request, name):
+    campaign = Campaign.objects.get(is_active=True)
+    try:
+        thing = Thing.objects.get(campaign=campaign, name=name)
+    except Thing.DoesNotExist:
+        raise Http404
+
+    if request.method == 'POST':
+        form = EditDescriptionForm(request.POST)
+        if form.is_valid():
+            thing.description = form.cleaned_data['description']
+            thing.save()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = EditDescriptionForm({'name': thing.name, 'description': thing.description})
+
+    context = {
+        'thing': thing,
+        'form': form,
+        'search_form': SearchForm()
+    }
+    return render(request, 'campaign/edit_description.html', context)
 
 
 def change_campaign(request, name):

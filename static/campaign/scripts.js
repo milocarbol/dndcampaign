@@ -9,7 +9,7 @@ function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker
         for (var i = 0; i < raw_description.length; i++) {
             if (raw_description[i] == thing_link_marker) {
                 if (reading) {
-                    var link = "<a href=\"" + thing_url + name + "\" target=\"_blank\">" + name + "</a>";
+                    var link = "<a href=\"" + thing_url + name + "\">" + name + "</a>";
                     new_description = new_description.replace(replace_me, link);
                     name = '';
                     reading = false;

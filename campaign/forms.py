@@ -86,6 +86,11 @@ class EditEncountersForm(forms.Form):
     encounters = forms.CharField(label='Encounters', widget=forms.Textarea, required=False)
 
 
+class EditDescriptionForm(forms.Form):
+    name = forms.HiddenInput()
+    description = forms.CharField(label='Description', widget=forms.Textarea)
+
+
 class ChangeCampaignForm(forms.Form):
     campaign = forms.ModelChoiceField(queryset=Campaign.objects.all())
 
