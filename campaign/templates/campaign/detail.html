@@ -128,3 +128,8 @@
     {% endif %}
 </div>
 {% endblock %}
+{% block js_code %}
+<script>
+    addLinksToDescriptions("{{ link_marker }}");
+</script>
+{% endblock %}

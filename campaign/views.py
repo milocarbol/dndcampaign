@@ -64,6 +64,7 @@ def list_all(request, thing_type):
 
     context = {
         'types': list_data,
+        'link_marker': '@',
         'campaign': campaign.name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'filters': order_attribute_filters(get_attribute_filters(list_data)),
@@ -153,6 +154,7 @@ def detail(request, name):
 
     context = {
         'thing': thing_info,
+        'link_marker': '@',
         'campaign': campaign.name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'parent_locations': parent_locations,

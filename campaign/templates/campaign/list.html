@@ -36,54 +36,6 @@
 {% endblock %}
 {% block js_code %}
 <script>
-    function evaluateFilters() {
-        if ($(".thing-filter.active").length == 0) {
-            $(".thing-block").show();
-        }
-        else {
-            $(".thing-block").hide();
-            if ($("#match-button").hasClass("match-by-or")) {
-                $(".thing-filter.active").each(function() {
-                    var clss = $(this).attr("id");
-                    $(".thing-block." + clss).show();
-                });
-            }
-            else {
-                var clsses = "";
-                $(".thing-filter.active").each(function() {
-                    clsses += "." + $(this).attr("id");
-                });
-                $(".thing-block" + clsses).show();
-            }
-        }
-    }
-    {% for filter in filters %}
-        {% for value in filter.values %}
-            $("#{{ value.class }}").click(function() {
-                if ($("#{{ value.class }}").hasClass("active")) {
-                    $("#{{ value.class }}").removeClass("active");
-                }
-                else {
-                    $("#{{ value.class }}").addClass("active");
-                }
-
-                evaluateFilters();
-                return false;
-            });
-        {% endfor %}
-    {% endfor %}
-    $("#match-button").click(function() {
-        if ($("#match-button").hasClass("match-by-or")) {
-            $("#match-button").removeClass("match-by-or");
-            $("#match-button").addClass("match-by-and");
-            $("#match-button").text("Match any");
-        }
-        else {
-            $("#match-button").removeClass("match-by-and");
-            $("#match-button").addClass("match-by-or");
-            $("#match-button").text("Match all");
-        }
-        evaluateFilters();
-    });
+    addLinksToDescriptions("{{ link_marker }}");
 </script>
 {% endblock %}
