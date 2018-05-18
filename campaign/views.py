@@ -64,7 +64,10 @@ def list_all(request, thing_type):
 
     context = {
         'types': list_data,
-        'link_marker': '@',
+        'thing_link_marker': '@',
+        'thing_url': '/campaign/thing/',
+        'beyond_link_marker': '$',
+        'beyond_url': 'https://www.dndbeyond.com/monsters/',
         'campaign': campaign.name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'filters': order_attribute_filters(get_attribute_filters(list_data)),
@@ -154,7 +157,10 @@ def detail(request, name):
 
     context = {
         'thing': thing_info,
-        'link_marker': '@',
+        'thing_link_marker': '@',
+        'thing_url': '/campaign/thing/',
+        'beyond_link_marker': '$',
+        'beyond_url': 'https://www.dndbeyond.com/monsters/',
         'campaign': campaign.name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'parent_locations': parent_locations,

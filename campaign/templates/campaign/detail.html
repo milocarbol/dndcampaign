@@ -48,7 +48,7 @@
                                         <td>
                                             {{ forloop.counter }}
                                         </td>
-                                        <td>
+                                        <td class="encounter">
                                             {{ encounter.name }}
                                         </td>
                                     </tr>
@@ -130,6 +130,6 @@
 {% endblock %}
 {% block js_code %}
 <script>
-    addLinksToDescriptions("{{ link_marker }}");
+    addLinksToDescriptions("{{ thing_link_marker }}", "{{ thing_url }}", "{{ beyond_link_marker }}", "{{ beyond_url }}");
 </script>
 {% endblock %}
