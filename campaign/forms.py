@@ -1,6 +1,7 @@
 from django import forms
+from django.shortcuts import get_object_or_404
 
-from .models import Thing, UsefulLink, Campaign
+from .models import Thing, Attribute, AttributeValue, Campaign
 
 
 ATTITUDE_CHOICES = [
@@ -8,6 +9,12 @@ ATTITUDE_CHOICES = [
     ('Neutral', 'Neutral'),
     ('Friendly', 'Friendly'),
     ('Loyal', 'Loyal')
+]
+
+MAGNITUDE_CHOICES = [
+    ('Low', 'Low'),
+    ('Moderate', 'Moderate'),
+    ('High', 'High')
 ]
 
 
@@ -38,11 +45,6 @@ class NewLocationForm(forms.Form):
 
 
 class NewFactionForm(forms.Form):
-    MAGNITUDE_CHOICES = [
-        ('Low', 'Low'),
-        ('Moderate', 'Moderate'),
-        ('High', 'High')
-    ]
 
     name = forms.CharField(label='Name')
     description = forms.CharField(label='Description', widget=forms.Textarea)
@@ -89,6 +91,28 @@ class EditEncountersForm(forms.Form):
 class EditDescriptionForm(forms.Form):
     name = forms.HiddenInput()
     description = forms.CharField(label='Description', widget=forms.Textarea)
+
+
+class ChangeTextAttributeForm(forms.Form):
+    name = forms.HiddenInput()
+    value = forms.CharField(label='Value')
+
+
+class ChangeOptionAttributeForm(forms.Form):
+    name = forms.HiddenInput()
+    value = forms.ChoiceField(label='Value', choices=[])
+
+    def refresh_fields(self, thing_type, name):
+        attribute = get_object_or_404(Attribute, thing_type=thing_type, name=name)
+        if attribute.name == 'Attitude':
+            self.fields['value'].choices = ATTITUDE_CHOICES
+        elif attribute.name == 'Leader':
+            choices = []
+            for npc in Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='NPC').order_by('name'):
+                choices.append((npc.name, npc.name),)
+            self.fields['value'].choices = choices
+        elif attribute.name == 'Power' or attribute.name == 'Reach':
+            self.fields['value'].choices = MAGNITUDE_CHOICES
 
 
 class ChangeCampaignForm(forms.Form):

@@ -6,7 +6,7 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm
 
 
 def index(request):
@@ -140,7 +140,9 @@ def detail(request, name):
             'encounter_type': encounter_type,
             'list': random_encounters
         })
-    
+
+    editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type).order_by('name')]
+
     thing_info = {
         'name': thing.name,
         'description': thing.description,
@@ -148,7 +150,8 @@ def detail(request, name):
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
         'encounters': encounters,
         'display_encounters': display_encounters,
-        'enable_random_encounters': thing.thing_type.name == 'Location'
+        'enable_random_encounters': thing.thing_type.name == 'Location',
+        'editable_attributes': editable_attributes
     }
 
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
@@ -617,6 +620,55 @@ def edit_description(request, name):
         'search_form': SearchForm()
     }
     return render(request, 'campaign/edit_description.html', context)
+
+
+def set_attribute(request, name, attribute_name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+    attribute = get_object_or_404(Attribute, thing_type=thing.thing_type, name=attribute_name)
+    if request.method == 'POST':
+        if attribute.name == 'Attitude' or attribute.name == 'Leader' or attribute.name == 'Power' or attribute.name == 'Reach':
+            form = ChangeOptionAttributeForm(request.POST)
+            form.refresh_fields(attribute.thing_type, attribute.name)
+            if form.is_valid():
+                attribute_value = AttributeValue.objects.filter(attribute=attribute, thing=thing)
+                if attribute_value:
+                    attribute_value = attribute_value[0]
+                else:
+                    attribute_value = AttributeValue(attribute=attribute, thing=thing)
+                attribute_value.value = form.cleaned_data['value']
+                attribute_value.save()
+                return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+        else:
+            form = ChangeTextAttributeForm(request.POST)
+            if form.is_valid():
+                attribute_value = AttributeValue.objects.filter(attribute=attribute, thing=thing)
+                if attribute_value:
+                    attribute_value = attribute_value[0]
+                else:
+                    attribute_value = AttributeValue(attribute=attribute, thing=thing)
+                attribute_value.value = form.cleaned_data['value']
+                attribute_value.save()
+                return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        attribute_value = AttributeValue.objects.filter(attribute=attribute, thing=thing)
+        if attribute_value:
+            attribute_value = attribute_value[0]
+        else:
+            attribute_value = AttributeValue(attribute=attribute, thing=thing, value='')
+        if attribute.name == 'Attitude' or attribute.name == 'Leader' or attribute.name == 'Power' or attribute.name == 'Reach':
+            form = ChangeOptionAttributeForm({'name': attribute.name, 'value': attribute_value.value})
+            form.refresh_fields(attribute.thing_type, attribute.name)
+        else:
+            form = ChangeTextAttributeForm({'name': attribute.name, 'value': attribute_value.value})
+
+    context = {
+        'thing': thing,
+        'attribute': attribute,
+        'form': form,
+        'search_form': SearchForm()
+    }
+    return render(request, 'campaign/set_attribute.html', context)
 
 
 def change_campaign(request, name):
