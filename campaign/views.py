@@ -282,7 +282,7 @@ def export(request):
     }
 
     response = JsonResponse(data)
-    response['Content-Disposition'] = 'attachment; filename="campaign.json"'
+    response['Content-Disposition'] = 'attachment; filename="{0}.json"'.format(campaign.name.lower().replace(' ', '_'))
 
     return response
 
