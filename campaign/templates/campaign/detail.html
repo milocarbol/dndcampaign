@@ -22,6 +22,7 @@
                             <tr>
                                 <td>
                                     <a href="{{ link.value }}" target="_blank">{{ link.name }}</a>
+                                    <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:remove_link' thing.name link.name %}" role="button"> - </a>
                                 </td>
                             </tr>
                         {% endfor %}

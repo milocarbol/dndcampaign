@@ -567,6 +567,16 @@ def add_link(request, name):
     return render(request, 'campaign/add_link.html', context)
 
 
+def remove_link(request, name, link_name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+
+    useful_link = get_object_or_404(UsefulLink, thing=thing, name=link_name)
+    useful_link.delete()
+
+    return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+
+
 def edit_random_encounters(request, name, type_name):
     campaign = Campaign.objects.get(is_active=True)
     try:
