@@ -45,3 +45,24 @@ function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker
         $(this).html(new_description);
     })
 }
+function evaluateFilters() {
+    if ($(".thing-filter.active").length == 0) {
+        $(".thing-block").show();
+    }
+    else {
+        $(".thing-block").hide();
+        if ($("#match-button").hasClass("match-by-or")) {
+            $(".thing-filter.active").each(function() {
+                var clss = $(this).attr("id");
+                $(".thing-block." + clss).show();
+            });
+        }
+        else {
+            var clsses = "";
+            $(".thing-filter.active").each(function() {
+                clsses += "." + $(this).attr("id");
+            });
+            $(".thing-block" + clsses).show();
+        }
+    }
+}

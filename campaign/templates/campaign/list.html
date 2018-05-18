@@ -37,5 +37,33 @@
 {% block js_code %}
 <script>
     addLinksToDescriptions("{{ thing_link_marker }}", "{{ thing_url }}", "{{ beyond_link_marker }}", "{{ beyond_url }}");
+    {% for filter in filters %}
+        {% for value in filter.values %}
+            $("#{{ value.class }}").click(function() {
+                if ($("#{{ value.class }}").hasClass("active")) {
+                    $("#{{ value.class }}").removeClass("active");
+                }
+                else {
+                    $("#{{ value.class }}").addClass("active");
+                }
+
+                evaluateFilters();
+                return false;
+            });
+        {% endfor %}
+    {% endfor %}
+    $("#match-button").click(function() {
+        if ($("#match-button").hasClass("match-by-or")) {
+            $("#match-button").removeClass("match-by-or");
+            $("#match-button").addClass("match-by-and");
+            $("#match-button").text("Match any");
+        }
+        else {
+            $("#match-button").removeClass("match-by-and");
+            $("#match-button").addClass("match-by-or");
+            $("#match-button").text("Match all");
+        }
+        evaluateFilters();
+    });
 </script>
 {% endblock %}
