@@ -524,10 +524,7 @@ def create_new_npc(request):
 
 def add_link(request, name):
     campaign = Campaign.objects.get(is_active=True)
-    try:
-        thing = Thing.objects.get(campaign=campaign, name=name)
-    except Thing.DoesNotExist:
-        raise Http404
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
 
     if request.method == 'POST':
         form = AddLinkForm(request.POST)
@@ -539,15 +536,14 @@ def add_link(request, name):
         form = AddLinkForm()
 
     context = {
-        'thing': {
-            'name': thing.name
-        },
         'campaign': campaign.name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'search_form': SearchForm(),
+        'header': 'Add link to {0}'.format(thing.name),
+        'url': reverse('campaign:add_link', args=(thing.name,)),
         'form': form
     }
-    return render(request, 'campaign/add_link.html', context)
+    return render(request, 'campaign/edit_page.html', context)
 
 
 def remove_link(request, name, link_name):
@@ -583,12 +579,12 @@ def edit_random_encounters(request, name, type_name):
         form = EditEncountersForm({'name': name, 'encounters': '\n'.join([e.name for e in random_encounters])})
 
     context = {
-        'thing': thing,
-        'encounter_type': type_name,
+        'header': 'Edit {0} encounters for {1}'.format(type_name, thing.name),
+        'url': reverse('campaign:edit_encounters', args=(thing.name, type_name)),
         'form': form,
         'search_form': SearchForm()
     }
-    return render(request, 'campaign/edit_encounters.html', context)
+    return render(request, 'campaign/edit_page.html', context)
 
 
 def edit_description(request, name):
@@ -608,11 +604,12 @@ def edit_description(request, name):
         form = EditDescriptionForm({'name': thing.name, 'description': thing.description})
 
     context = {
-        'thing': thing,
         'form': form,
+        'header': 'Edit description for {0}'.format(thing.name),
+        'url': reverse('campaign:edit_description', args=(thing.name,)),
         'search_form': SearchForm()
     }
-    return render(request, 'campaign/edit_description.html', context)
+    return render(request, 'campaign/edit_page.html', context)
 
 
 def set_attribute(request, name, attribute_name):
@@ -657,11 +654,13 @@ def set_attribute(request, name, attribute_name):
 
     context = {
         'thing': thing,
+        'header': 'Change {0} for {1}'.format(attribute.name, thing.name),
+        'url': reverse('campaign:set_attribute', args=(thing.name, attribute.name)),
         'attribute': attribute,
         'form': form,
         'search_form': SearchForm()
     }
-    return render(request, 'campaign/set_attribute.html', context)
+    return render(request, 'campaign/edit_page.html', context)
 
 
 def change_campaign(request, name):

@@ -84,22 +84,18 @@ class AddLinkForm(forms.Form):
 
 
 class EditEncountersForm(forms.Form):
-    name = forms.HiddenInput()
     encounters = forms.CharField(label='Encounters', widget=forms.Textarea, required=False)
 
 
 class EditDescriptionForm(forms.Form):
-    name = forms.HiddenInput()
     description = forms.CharField(label='Description', widget=forms.Textarea)
 
 
 class ChangeTextAttributeForm(forms.Form):
-    name = forms.HiddenInput()
     value = forms.CharField(label='Value')
 
 
 class ChangeOptionAttributeForm(forms.Form):
-    name = forms.HiddenInput()
     value = forms.ChoiceField(label='Value', choices=[])
 
     def refresh_fields(self, thing_type, name):
