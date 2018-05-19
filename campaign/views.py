@@ -9,6 +9,16 @@ from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Cam
 from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm
 
 
+def build_context(context):
+    full_context = {
+        'search_form': SearchForm(),
+        'campaign': Campaign.objects.get(is_active=True).name,
+        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
+    }
+    full_context.update(context)
+    return full_context
+
+
 def index(request):
     context = {
     }
@@ -68,13 +78,10 @@ def list_all(request, thing_type):
         'thing_url': '/campaign/thing/',
         'beyond_link_marker': '$',
         'beyond_url': 'https://www.dndbeyond.com/monsters/',
-        'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
-        'filters': order_attribute_filters(get_attribute_filters(list_data)),
-        'search_form': SearchForm()
+        'filters': order_attribute_filters(get_attribute_filters(list_data))
     }
 
-    return render(request, 'campaign/list.html', context)
+    return render(request, 'campaign/list.html', build_context(context))
 
 
 def list_everything(request):
@@ -164,16 +171,13 @@ def detail(request, name):
         'thing_url': '/campaign/thing/',
         'beyond_link_marker': '$',
         'beyond_url': 'https://www.dndbeyond.com/monsters/',
-        'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'parent_locations': parent_locations,
         'parent_factions': parent_factions,
         'child_locations': child_locations,
         'child_npcs': child_npcs,
-        'child_factions': child_factions,
-        'search_form': SearchForm()
+        'child_factions': child_factions
     }
-    return render(request, 'campaign/detail.html', context)
+    return render(request, 'campaign/detail.html', build_context(context))
 
 
 def get_attributes_to_display(campaign, thing):
@@ -302,12 +306,9 @@ def import_campaign(request):
     else:
 
         context = {
-            'campaign': campaign.name,
-            'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
-            'search_form': SearchForm(),
             'form': UploadFileForm()
         }
-        return render(request, 'campaign/import.html', context)
+        return render(request, 'campaign/import.html', build_context(context))
 
 
 def save_campaign(campaign, json_file):
@@ -366,10 +367,9 @@ def move_thing(request, name):
         'thing': thing,
         'url': reverse('campaign:move_thing', args=(thing.name,)),
         'header': 'Change location for {0} '.format(thing.name),
-        'form': form,
-        'search_form': SearchForm()
+        'form': form
     }
-    return render(request, 'campaign/edit_page.html', context)
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def new_thing(request, thing_type):
@@ -416,13 +416,10 @@ def create_new_location(request):
     form.refresh_fields()
 
     context = {
-        'search_form': SearchForm(),
-        'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'thing_form': form,
         'thing_type': 'Location'
     }
-    return render(request, 'campaign/new_thing.html', context)
+    return render(request, 'campaign/new_thing.html', build_context(context))
 
 
 def create_new_faction(request):
@@ -465,13 +462,10 @@ def create_new_faction(request):
     form.refresh_fields()
 
     context = {
-        'search_form': SearchForm(),
-        'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'thing_form': form,
         'thing_type': 'Faction'
     }
-    return render(request, 'campaign/new_thing.html', context)
+    return render(request, 'campaign/new_thing.html', build_context(context))
 
 
 def create_new_npc(request):
@@ -513,13 +507,10 @@ def create_new_npc(request):
     form.refresh_fields()
 
     context = {
-        'search_form': SearchForm(),
-        'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'thing_form': form,
         'thing_type': 'NPC'
     }
-    return render(request, 'campaign/new_thing.html', context)
+    return render(request, 'campaign/new_thing.html', build_context(context))
 
 
 def add_link(request, name):
@@ -536,14 +527,11 @@ def add_link(request, name):
         form = AddLinkForm()
 
     context = {
-        'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
-        'search_form': SearchForm(),
         'header': 'Add link to {0}'.format(thing.name),
         'url': reverse('campaign:add_link', args=(thing.name,)),
         'form': form
     }
-    return render(request, 'campaign/edit_page.html', context)
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def remove_link(request, name, link_name):
@@ -581,10 +569,9 @@ def edit_random_encounters(request, name, type_name):
     context = {
         'header': 'Edit {0} encounters for {1}'.format(type_name, thing.name),
         'url': reverse('campaign:edit_encounters', args=(thing.name, type_name)),
-        'form': form,
-        'search_form': SearchForm()
+        'form': form
     }
-    return render(request, 'campaign/edit_page.html', context)
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def edit_description(request, name):
@@ -606,10 +593,9 @@ def edit_description(request, name):
     context = {
         'form': form,
         'header': 'Edit description for {0}'.format(thing.name),
-        'url': reverse('campaign:edit_description', args=(thing.name,)),
-        'search_form': SearchForm()
+        'url': reverse('campaign:edit_description', args=(thing.name,))
     }
-    return render(request, 'campaign/edit_page.html', context)
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def set_attribute(request, name, attribute_name):
@@ -657,10 +643,9 @@ def set_attribute(request, name, attribute_name):
         'header': 'Change {0} for {1}'.format(attribute.name, thing.name),
         'url': reverse('campaign:set_attribute', args=(thing.name, attribute.name)),
         'attribute': attribute,
-        'form': form,
-        'search_form': SearchForm()
+        'form': form
     }
-    return render(request, 'campaign/edit_page.html', context)
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def change_campaign(request, name):
