@@ -115,6 +115,14 @@ class ChangeOptionAttributeForm(forms.Form):
             self.fields['value'].choices = MAGNITUDE_CHOICES
 
 
+class ChangeLocationForm(forms.Form):
+    location = forms.ModelChoiceField(label='Move to', queryset=Thing.objects.all(), required=False)
+    clear_location = forms.BooleanField(label='Clear location', required=False)
+
+    def refresh_fields(self):
+        self.fields['location'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')
+
+
 class ChangeCampaignForm(forms.Form):
     campaign = forms.ModelChoiceField(queryset=Campaign.objects.all())
 

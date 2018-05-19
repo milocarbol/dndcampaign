@@ -6,7 +6,7 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm
 
 
 def index(request):
@@ -337,56 +337,39 @@ def save_campaign(campaign, json_file):
         thing_object.save()
 
 
-def move_thing_options(request, name):
+def move_thing(request, name):
     campaign = Campaign.objects.get(is_active=True)
-    try:
-        thing = Thing.objects.get(campaign=campaign, name=name)
-    except Thing.DoesNotExist:
-        raise Http404
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
 
-    current_locations = Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location')
-    if len(current_locations) == 0:
-        current_location = None
+    if request.method == 'POST':
+        form = ChangeLocationForm(request.POST)
+        if form.is_valid():
+            for old_location in Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location'):
+                old_location.children.remove(thing)
+                old_location.save()
+            if not form.cleaned_data['clear_location'] and form.cleaned_data['location']:
+                new_location = get_object_or_404(Thing, campaign=campaign, thing_type__name='Location', name=form.cleaned_data['location'])
+                new_location.children.add(thing)
+                new_location.save()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
-        current_location = current_locations[0].name
-
-    options = [location.name for location in Thing.objects.filter(campaign=campaign, thing_type__name='Location').order_by('name')]
+        current_locations = Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location')
+        if len(current_locations) == 0:
+            current_location = None
+        else:
+            current_location = current_locations[0].pk
+        print(current_location)
+        form = ChangeLocationForm({'location': current_location})
+        form.refresh_fields()
 
     context = {
-        'thing': {
-            'name': thing.name,
-            'location': current_location
-        },
-        'campaign': campaign.name,
-        'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
-        'options': options,
+        'thing': thing,
+        'url': reverse('campaign:move_thing', args=(thing.name,)),
+        'header': 'Change location for {0} '.format(thing.name),
+        'form': form,
         'search_form': SearchForm()
     }
-
-    return render(request, 'campaign/move_options.html', context)
-
-
-def move_thing_confirm(request, name, new_location_name):
-    campaign = Campaign.objects.get(is_active=True)
-
-    try:
-        thing = Thing.objects.get(campaign=campaign, name=name)
-        if new_location_name == 'CLEAR':
-            new_location = None
-        else:
-            new_location = Thing.objects.get(campaign=campaign, name=new_location_name)
-    except Thing.DoesNotExist:
-        raise Http404
-
-    for old_location in Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location'):
-        old_location.children.remove(thing)
-        old_location.save()
-
-    if new_location:
-        new_location.children.add(thing)
-        new_location.save()
-
-    return HttpResponseRedirect(reverse('campaign:detail', args=(name,)))
+    return render(request, 'campaign/edit_page.html', context)
 
 
 def new_thing(request, thing_type):
