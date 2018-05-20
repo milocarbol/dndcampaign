@@ -27,7 +27,7 @@ function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker
             }
             else if (raw_description[i] == beyond_link_marker) {
                 if (reading) {
-                    var link = "<a href=\"" + beyond_url + name.replace(' ', '-') + "\" target=\"_blank\">" + name + "</a>";
+                    var link = "<a href=\"" + beyond_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
                     new_description = new_description.replace(replace_me, link);
                     name = '';
                     reading = false;
