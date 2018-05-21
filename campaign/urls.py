@@ -19,5 +19,7 @@ urlpatterns = [
     path('change_campaign/<name>', views.change_campaign, name='change_campaign'),
     path('set_attribute/<name>/<attribute_name>', views.set_attribute, name='set_attribute'),
     path('remove_link/<name>/<link_name>', views.remove_link, name='remove_link'),
-    path('edit_location/<name>', views.move_thing, name='move_thing')
+    path('edit_location/<name>', views.move_thing, name='move_thing'),
+    path('random/<attribute>', views.get_random_attribute, name='get_random_attribute'),
+    path('random/<attribute>/<category>', views.get_random_attribute_in_category, name='get_random_attribute_in_category')
 ]

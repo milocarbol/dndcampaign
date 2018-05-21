@@ -1,11 +1,11 @@
-import json, re
+import json, random, re
 
 from django.shortcuts import get_object_or_404, render
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.urls import reverse
 from operator import methodcaller
 
-from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, NpcOccupationType, NpcOccupation, NpcRace, NpcAppearance, NpcPersonalityTrait
 from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm
 
 
@@ -506,9 +506,25 @@ def create_new_npc(request):
 
     form.refresh_fields()
 
+    allow_random = [
+        'race'
+    ]
+    allow_random_by_category = [
+        'occupation'
+    ]
+    randomizer_categories = [
+        {
+            'field_name': 'occupation',
+            'categories': [t.name for t in NpcOccupationType.objects.all()]
+        }
+    ]
+
     context = {
         'thing_form': form,
-        'thing_type': 'NPC'
+        'thing_type': 'NPC',
+        'allow_random': allow_random,
+        'allow_random_by_category': allow_random_by_category,
+        'randomizer_categories': randomizer_categories
     }
     return render(request, 'campaign/new_thing.html', build_context(context))
 
@@ -646,6 +662,38 @@ def set_attribute(request, name, attribute_name):
         'form': form
     }
     return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def get_random_attribute(request, attribute):
+    data = {}
+    if attribute.lower() == 'race':
+        options = [r.name for r in NpcRace.objects.all()]
+    elif attribute.lower() == 'appearance':
+        options = [a.name for a in NpcAppearance.objects.all()]
+    elif attribute.lower() == 'personality':
+        options = [p.name for p in NpcPersonalityTrait.objects.all()]
+    else:
+        options = []
+
+    if options:
+        data = {
+            'name': random.choice(options)
+        }
+
+    return JsonResponse(data)
+
+
+def get_random_attribute_in_category(request, attribute, category):
+    data = {}
+    if attribute.lower() == 'occupation':
+        occupation_type = get_object_or_404(NpcOccupationType, name=category)
+        occupations = [o.name for o in NpcOccupation.objects.filter(occupation_type=occupation_type)]
+
+        if occupations:
+            data = {
+                'name': random.choice(occupations)
+            }
+    return JsonResponse(data)
 
 
 def change_campaign(request, name):

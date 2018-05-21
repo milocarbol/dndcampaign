@@ -68,3 +68,7 @@ function evaluateFilters() {
         }
     }
 }
+
+function getRandomAttribute(attribute, url, callbackFunction) {
+    $.getJSON(url, {}, callbackFunction);
+}
