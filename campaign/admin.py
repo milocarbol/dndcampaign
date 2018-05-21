@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from .forms import ChangeCampaignForm, CopyToCampaignForm
-from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounterType, RandomEncounter
+from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounterType, RandomEncounter, NpcAppearance, NpcPersonalityTrait, NpcOccupationType, NpcOccupation, NpcRace
 
 
 class ThingAdmin(admin.ModelAdmin):
@@ -91,3 +91,8 @@ admin.site.register(UsefulLink)
 admin.site.register(Campaign)
 admin.site.register(RandomEncounterType)
 admin.site.register(RandomEncounter)
+admin.site.register(NpcAppearance)
+admin.site.register(NpcPersonalityTrait)
+admin.site.register(NpcOccupationType)
+admin.site.register(NpcOccupation)
+admin.site.register(NpcRace)

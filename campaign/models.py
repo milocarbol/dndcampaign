@@ -81,3 +81,42 @@ class RandomEncounter(models.Model):
 
     def __str__(self):
         return '[{0}] {1}:{2}'.format(self.thing.name, self.random_encounter_type.name, self.name)
+
+
+class NpcPersonalityTrait(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class NpcAppearance(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class NpcRace(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class NpcOccupationType(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class NpcOccupation(models.Model):
+    name = models.CharField(max_length=50)
+    occupation_type = models.ForeignKey(NpcOccupationType, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('name', 'occupation_type'),)
+
+    def __str__(self):
+        return '[{0}] {1}'.format(self.occupation_type.name, self.name)
