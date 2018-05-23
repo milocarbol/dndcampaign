@@ -104,6 +104,17 @@ class NpcRace(models.Model):
         return self.name
 
 
+class NpcName(models.Model):
+    name = models.CharField(max_length=50)
+    npc_race = models.ForeignKey(NpcRace, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('name', 'npc_race'),)
+
+    def __str__(self):
+        return self.name
+
+
 class NpcOccupationType(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
