@@ -1,7 +1,7 @@
 from django import forms
 from django.shortcuts import get_object_or_404
 
-from .models import Thing, Attribute, AttributeValue, Campaign
+from .models import Thing, Attribute, AttributeValue, Campaign, NpcOccupationType, NpcRace
 
 
 ATTITUDE_CHOICES = [
@@ -64,13 +64,12 @@ class NewFactionForm(forms.Form):
 
 class NewNpcForm(forms.Form):
     name = forms.CharField(label='Name')
+    race = forms.CharField(label='Race')
+    occupation = forms.CharField(label='Occupation', required=False)
     description = forms.CharField(label='Description', widget=forms.Textarea)
     location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
     factions = forms.ModelMultipleChoiceField(label='Member of', queryset=Thing.objects.all(), required=False)
-
-    race = forms.CharField(label='Race')
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
-    occupation = forms.CharField(label='Occupation', required=False)
     link = forms.CharField(label='D&D Beyond URL', required=False)
 
     def refresh_fields(self):
@@ -81,6 +80,10 @@ class NewNpcForm(forms.Form):
 class AddLinkForm(forms.Form):
     name = forms.CharField(label='Name')
     value = forms.CharField(label='URL')
+
+
+class EditOptionalTextFieldForm(forms.Form):
+    value = forms.CharField(label='Value', widget=forms.Textarea, required=False)
 
 
 class EditEncountersForm(forms.Form):
@@ -126,3 +129,17 @@ class ChangeCampaignForm(forms.Form):
 class CopyToCampaignForm(forms.Form):
     campaign = forms.ModelChoiceField(queryset=Campaign.objects.all())
     copy_children = forms.BooleanField(required=False)
+
+
+class SelectCategoryForAttributeForm(forms.Form):
+    category = forms.ChoiceField(label='Categories', choices=[])
+
+    def refresh_fields(self, attribute_name):
+        choices = []
+        if attribute_name == 'occupation':
+            for t in NpcOccupationType.objects.all().order_by('name').iterator():
+                choices.append((t.name, t.name))
+        elif attribute_name == 'name':
+            for r in NpcRace.objects.all().order_by('name').iterator():
+                choices.append((r.name, r.name))
+        self.fields['category'].choices = choices

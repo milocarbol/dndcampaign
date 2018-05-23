@@ -6,7 +6,7 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, NpcOccupationType, NpcOccupation, NpcRace, NpcAppearance, NpcPersonalityTrait
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm
 
 
 def build_context(context):
@@ -706,3 +706,65 @@ def change_campaign(request, name):
     new_campaign.save()
 
     return HttpResponseRedirect(reverse('campaign:list_everything'))
+
+
+def manage_randomizer_options(request, thing_type, attribute):
+    form = EditOptionalTextFieldForm()
+    if request.method == 'POST':
+        if thing_type == 'NPC':
+            if attribute == 'race':
+                form = EditOptionalTextFieldForm(request.POST)
+                if form.is_valid():
+                    NpcRace.objects.all().delete()
+                    for race in form.cleaned_data['value'].split('\n'):
+                        if race:
+                            npc_race = NpcRace(name=race)
+                            npc_race.save()
+                    return HttpResponseRedirect(reverse('campaign:list_everything'))
+            elif attribute == 'occupation' or attribute == 'name':
+                form = SelectCategoryForAttributeForm(request.POST)
+                form.refresh_fields(attribute)
+                if form.is_valid():
+                    return HttpResponseRedirect(reverse('campaign:manage_randomizer_options_for_category', args=(thing_type, attribute, form.cleaned_data['category'])))
+    else:
+        if thing_type == 'NPC':
+            if attribute == 'race':
+                form = EditOptionalTextFieldForm({'value': '\n'.join([r.name for r in NpcRace.objects.all().order_by('name')])})
+            elif attribute == 'occupation' or attribute == 'name':
+                form = SelectCategoryForAttributeForm()
+                form.refresh_fields(attribute)
+
+    context = {
+        'form': form,
+        'header': 'Edit options for {0} randomizer'.format(attribute),
+        'url': reverse('campaign:manage_randomizer_options', args=(thing_type, attribute))
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def manage_randomizer_options_for_category(request, thing_type, attribute, category):
+    form = EditOptionalTextFieldForm()
+    if request.method == 'POST':
+        if thing_type == 'NPC':
+            if attribute == 'occupation':
+                form = EditOptionalTextFieldForm(request.POST)
+                occupation_type = get_object_or_404(NpcOccupationType, name=category)
+                if form.is_valid():
+                    NpcOccupation.objects.filter(occupation_type=occupation_type).delete()
+                    for occupation in form.cleaned_data['value'].split('\n'):
+                        if occupation:
+                            npc_occupation = NpcOccupation(name=occupation, occupation_type=occupation_type)
+                            npc_occupation.save()
+                    return HttpResponseRedirect(reverse('campaign:list_everything'))
+    else:
+        if thing_type == 'NPC':
+            if attribute == 'occupation':
+                occupation_type = get_object_or_404(NpcOccupationType, name=category)
+                form = EditOptionalTextFieldForm({'value': '\n'.join([r.name for r in NpcOccupation.objects.filter(occupation_type=occupation_type).order_by('name')])})
+
+    context = {
+        'form': form,
+        'header': 'Edit options for {0} {1} randomizer'.format(category, attribute),
+        'url': reverse('campaign:manage_randomizer_options_for_category', args=(thing_type, attribute, category))
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))

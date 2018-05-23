@@ -48,6 +48,16 @@
                                 <a class="dropdown-item" href="{% url 'campaign:export' %}">Export Campaign</a>
                             </div>
                         </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Settings
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="settingsDropdown">
+                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'NPC' 'name' %}">NPC Names</a>
+                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'NPC' 'race' %}">NPC Races</a>
+                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'NPC' 'occupation' %}">NPC Occupations</a>
+                            </div>
+                        </li>
                     </ul>
                     <form class="form-inline my-2 my-lg-0" action="{% url 'campaign:search' %}" method="post">
                         {% csrf_token %}
