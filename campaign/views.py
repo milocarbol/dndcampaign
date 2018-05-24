@@ -425,7 +425,7 @@ def create_new_location(request):
         randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='Location', name__iexact=attribute)
         randomizer_categories.append({
             'field_name': attribute,
-            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')]
+            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute, show=True).order_by('name')]
         })
 
     context = {
@@ -534,7 +534,7 @@ def create_new_npc(request):
         randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='NPC', name__iexact=attribute)
         randomizer_categories.append({
             'field_name': attribute,
-            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')]
+            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute, show=True).order_by('name')]
         })
 
     context = {
@@ -699,11 +699,23 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
     randomizer_attribute_category = get_object_or_404(RandomizerAttributeCategory,
                                                       attribute=randomizer_attribute,
                                                       name__iexact=category)
+    randomizer_attribute_category_2 = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
+                                                                                 name__iexact=category + '_2')
     
     options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category)]
+    options2 = []
+    if randomizer_attribute_category_2:
+        options2 = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category_2[0])]
+
+    result = ''
     if options:
+        result = random.choice(options)
+    if options2:
+        result += ' ' + random.choice(options2)
+
+    if result:
         return JsonResponse({
-            'name': random.choice(options)
+            'name': result
         })
     else:
         return JsonResponse({})
