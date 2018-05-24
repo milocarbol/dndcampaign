@@ -711,7 +711,11 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
     if options:
         result = random.choice(options)
     if options2:
-        result += ' ' + random.choice(options2)
+        result2 = random.choice(options2)
+        if result2 == result2.lower():
+            result += result2
+        else:
+            result += ' ' + result2
 
     if result:
         return JsonResponse({
