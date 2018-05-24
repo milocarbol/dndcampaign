@@ -701,13 +701,15 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
                                                       name__iexact=category)
     randomizer_attribute_category_2 = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
                                                                                  name__iexact=category + '_2')
-    
+
+    result = ''
+    result_and = ''
+
     options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category)]
     options2 = []
     if randomizer_attribute_category_2:
         options2 = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category_2[0])]
 
-    result = ''
     if options:
         result = random.choice(options)
     if options2:
@@ -716,7 +718,12 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
             result += result2
         else:
             result += ' ' + result2
+        if randomizer_attribute_category_2[0].can_combine_with_self:
+            result_and = random.choice(options2) + ' and ' + random.choice(options2)
 
+    if result and result_and:
+        if random.choice([0, 1]) == 0:
+            result = result_and
     if result:
         return JsonResponse({
             'name': result
