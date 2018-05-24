@@ -477,9 +477,25 @@ def create_new_faction(request):
 
     form.refresh_fields()
 
+    allow_random = [
+    ]
+    allow_random_by_category = [
+        'name'
+    ]
+    randomizer_categories = []
+    for attribute in allow_random_by_category:
+        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='Faction', name__iexact=attribute)
+        randomizer_categories.append({
+            'field_name': attribute,
+            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute, show=True).order_by('name')]
+        })
+
     context = {
         'thing_form': form,
-        'thing_type': 'Faction'
+        'thing_type': 'Faction',
+        'allow_random': allow_random,
+        'allow_random_by_category': allow_random_by_category,
+        'randomizer_categories': randomizer_categories
     }
     return render(request, 'campaign/new_thing.html', build_context(context))
 
