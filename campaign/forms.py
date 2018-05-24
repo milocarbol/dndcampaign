@@ -1,7 +1,7 @@
 from django import forms
 from django.shortcuts import get_object_or_404
 
-from .models import Thing, Attribute, AttributeValue, Campaign, NpcOccupationType, NpcRace
+from .models import Thing, Attribute, AttributeValue, Campaign, NpcOccupationType, NpcRace, RandomizerAttribute, RandomizerAttributeCategory
 
 
 ATTITUDE_CHOICES = [
@@ -134,12 +134,7 @@ class CopyToCampaignForm(forms.Form):
 class SelectCategoryForAttributeForm(forms.Form):
     category = forms.ChoiceField(label='Categories', choices=[])
 
-    def refresh_fields(self, attribute_name):
-        choices = []
-        if attribute_name == 'occupation':
-            for t in NpcOccupationType.objects.all().order_by('name').iterator():
-                choices.append((t.name, t.name))
-        elif attribute_name == 'name':
-            for r in NpcRace.objects.all().order_by('name').iterator():
-                choices.append((r.name, r.name))
+    def refresh_fields(self, thing_type, attribute_name):
+        attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute_name)
+        choices = [(c.name, c.name) for c in RandomizerAttributeCategory.objects.filter(attribute=attribute).order_by('name')]
         self.fields['category'].choices = choices

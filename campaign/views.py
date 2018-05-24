@@ -415,9 +415,25 @@ def create_new_location(request):
 
     form.refresh_fields()
 
+    allow_random = [
+    ]
+    allow_random_by_category = [
+        'name'
+    ]
+    randomizer_categories = []
+    for attribute in allow_random_by_category:
+        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='Location', name__iexact=attribute)
+        randomizer_categories.append({
+            'field_name': attribute,
+            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')]
+        })
+
     context = {
         'thing_form': form,
-        'thing_type': 'Location'
+        'thing_type': 'Location',
+        'allow_random': allow_random,
+        'allow_random_by_category': allow_random_by_category,
+        'randomizer_categories': randomizer_categories
     }
     return render(request, 'campaign/new_thing.html', build_context(context))
 
@@ -513,16 +529,13 @@ def create_new_npc(request):
         'occupation',
         'name'
     ]
-    randomizer_categories = [
-        {
-            'field_name': 'occupation',
-            'categories': [t.name for t in NpcOccupationType.objects.all().order_by('name')]
-        },
-        {
-            'field_name': 'name',
-            'categories': [r.name for r in NpcRace.objects.all().order_by('name')]
-        }
-    ]
+    randomizer_categories = []
+    for attribute in allow_random_by_category:
+        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='NPC', name__iexact=attribute)
+        randomizer_categories.append({
+            'field_name': attribute,
+            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')]
+        })
 
     context = {
         'thing_form': form,
@@ -673,10 +686,12 @@ def get_random_attribute(request, thing_type, attribute):
     randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
     options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute)]
 
-    data = {
-        'name': random.choice(options)
-    }
-    return JsonResponse(data)
+    if options:
+        return JsonResponse({
+            'name': random.choice(options)
+        })
+    else:
+        return JsonResponse({})
 
 
 def get_random_attribute_in_category(request, thing_type, attribute, category):
@@ -684,11 +699,14 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
     randomizer_attribute_category = get_object_or_404(RandomizerAttributeCategory,
                                                       attribute=randomizer_attribute,
                                                       name__iexact=category)
+    
     options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category)]
-    data = {
-        'name': random.choice(options)
-    }
-    return JsonResponse(data)
+    if options:
+        return JsonResponse({
+            'name': random.choice(options)
+        })
+    else:
+        return JsonResponse({})
 
 
 def change_campaign(request, name):
@@ -708,7 +726,7 @@ def manage_randomizer_options(request, thing_type, attribute):
     if request.method == 'POST':
         if len(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)) > 0:
             form = SelectCategoryForAttributeForm(request.POST)
-            form.refresh_fields(attribute)
+            form.refresh_fields(thing_type, attribute)
             if form.is_valid():
                 return HttpResponseRedirect(reverse('campaign:manage_randomizer_options_for_category', args=(thing_type, attribute, form.cleaned_data['category'])))
         else:
@@ -724,9 +742,9 @@ def manage_randomizer_options(request, thing_type, attribute):
     else:
         if len(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)) > 0:
             form = SelectCategoryForAttributeForm()
-            form.refresh_fields(attribute)
+            form.refresh_fields(thing_type, attribute)
         else:
-            form = EditOptionalTextFieldForm({'value': '\n'.join([r.name for r in NpcRace.objects.all().order_by('name')])})
+            form = EditOptionalTextFieldForm({'value': '\n'.join([c.name for c in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')])})
 
     context = {
         'form': form,

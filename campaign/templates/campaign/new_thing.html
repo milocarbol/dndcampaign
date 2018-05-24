@@ -19,29 +19,27 @@
                             {{ field }}
                             <p>{{ field.errors }}</p>
                         </div>
-                        {% if thing_type == 'NPC' %}
-                            {% if field.name in allow_random_by_category %}
-                                <div class="col-sm-2 offset-sm-4">
-                                    <div class="dropdown">
-                                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            Randomize
-                                        </button>
-                                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                            {% for field_randomizer in randomizer_categories %}
-                                                {% if field_randomizer.field_name == field.name %}
-                                                    {% for category in field_randomizer.categories %}
-                                                        <a id="{{ field.name }}_{{ category }}" class="dropdown-item category_randomizer" href="#">{{ category }}</a>
-                                                    {% endfor %}
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
+                        {% if field.name in allow_random_by_category %}
+                            <div class="col-sm-2 offset-sm-4">
+                                <div class="dropdown">
+                                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Randomize
+                                    </button>
+                                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                        {% for field_randomizer in randomizer_categories %}
+                                            {% if field_randomizer.field_name == field.name %}
+                                                {% for category in field_randomizer.categories %}
+                                                    <a id="{{ field.name }}_{{ category }}" class="dropdown-item category_randomizer" href="#">{{ category }}</a>
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
                                     </div>
                                 </div>
-                            {% elif field.name in allow_random %}
-                                <div class="col-sm-2 offset-sm-4">
-                                    <button id="{{ field.name }}" type="button" class="btn btn-secondary randomizer">Randomize</button>
-                                </div>
-                            {% endif %}
+                            </div>
+                        {% elif field.name in allow_random %}
+                            <div class="col-sm-2 offset-sm-4">
+                                <button id="{{ field.name }}" type="button" class="btn btn-secondary randomizer">Randomize</button>
+                            </div>
                         {% endif %}
                     </div>
                 {% endfor %}
@@ -60,7 +58,7 @@
     $(".randomizer").click(function(event) {
         event.preventDefault();
         var field_name = $(this).attr("id");
-        getRandomAttribute(field_name, "/campaign/random/NPC/" + field_name, function(data) {
+        getRandomAttribute(field_name, "/campaign/random/{{ thing_type }}/" + field_name, function(data) {
             $("#id_" + field_name).val(data.name);
         });
     });
@@ -69,7 +67,7 @@
         var values = $(this).attr("id").split("_")
         var field_name = values[0];
         var category = values[1];
-        getRandomAttribute(field_name, "/campaign/random/NPC/" + field_name + "/" + category, function(data) {
+        getRandomAttribute(field_name, "/campaign/random/{{ thing_type }}/" + field_name + "/" + category, function(data) {
             $("#id_" + field_name).val(data.name);
         });
     });
