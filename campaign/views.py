@@ -5,7 +5,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.urls import reverse
 from operator import methodcaller
 
-from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, NpcOccupationType, NpcOccupation, NpcRace, NpcAppearance, NpcPersonalityTrait, NpcName
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, NpcOccupationType, NpcOccupation, NpcRace, NpcAppearance, NpcPersonalityTrait, NpcName, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption
 from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm
 
 
@@ -669,41 +669,25 @@ def set_attribute(request, name, attribute_name):
     return render(request, 'campaign/edit_page.html', build_context(context))
 
 
-def get_random_attribute(request, attribute):
-    if attribute.lower() == 'race':
-        options = [r.name for r in NpcRace.objects.all()]
-    elif attribute.lower() == 'appearance':
-        options = [a.name for a in NpcAppearance.objects.all()]
-    elif attribute.lower() == 'personality':
-        options = [p.name for p in NpcPersonalityTrait.objects.all()]
-    else:
-        options = []
+def get_random_attribute(request, thing_type, attribute):
+    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
+    options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute)]
 
-    if options:
-        data = {
-            'name': random.choice(options)
-        }
-    else:
-        data = {}
-
+    data = {
+        'name': random.choice(options)
+    }
     return JsonResponse(data)
 
 
-def get_random_attribute_in_category(request, attribute, category):
-    if attribute.lower() == 'occupation':
-        occupation_type = get_object_or_404(NpcOccupationType, name=category)
-        options = [o.name for o in NpcOccupation.objects.filter(occupation_type=occupation_type)]
-    elif attribute.lower() == 'name':
-        race = get_object_or_404(NpcRace, name=category)
-        options = [n.name for n in NpcName.objects.filter(npc_race=race)]
-    else:
-        options = []
-    if options:
-        data = {
-            'name': random.choice(options)
-        }
-    else:
-        data = {}
+def get_random_attribute_in_category(request, thing_type, attribute, category):
+    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
+    randomizer_attribute_category = get_object_or_404(RandomizerAttributeCategory,
+                                                      attribute=randomizer_attribute,
+                                                      name__iexact=category)
+    options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category)]
+    data = {
+        'name': random.choice(options)
+    }
     return JsonResponse(data)
 
 
@@ -720,29 +704,29 @@ def change_campaign(request, name):
 
 
 def manage_randomizer_options(request, thing_type, attribute):
-    form = EditOptionalTextFieldForm()
+    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
     if request.method == 'POST':
-        if thing_type == 'NPC':
-            if attribute == 'race':
-                form = EditOptionalTextFieldForm(request.POST)
-                if form.is_valid():
-                    for race in form.cleaned_data['value'].split('\n'):
-                        if race and len(NpcRace.objects.filter(name=race.strip())) == 0:
-                            npc_race = NpcRace(name=race.strip())
-                            npc_race.save()
-                    return HttpResponseRedirect(reverse('campaign:list_everything'))
-            elif attribute == 'occupation' or attribute == 'name':
-                form = SelectCategoryForAttributeForm(request.POST)
-                form.refresh_fields(attribute)
-                if form.is_valid():
-                    return HttpResponseRedirect(reverse('campaign:manage_randomizer_options_for_category', args=(thing_type, attribute, form.cleaned_data['category'])))
+        if len(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)) > 0:
+            form = SelectCategoryForAttributeForm(request.POST)
+            form.refresh_fields(attribute)
+            if form.is_valid():
+                return HttpResponseRedirect(reverse('campaign:manage_randomizer_options_for_category', args=(thing_type, attribute, form.cleaned_data['category'])))
+        else:
+            form = EditOptionalTextFieldForm(request.POST)
+            if form.is_valid():
+                RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).delete()
+                for option in form.cleaned_data['value'].split('\n'):
+                    option = option.strip()
+                    if option:
+                        randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=option)
+                        randomizer_option.save()
+                return HttpResponseRedirect(reverse('campaign:list_everything'))
     else:
-        if thing_type == 'NPC':
-            if attribute == 'race':
-                form = EditOptionalTextFieldForm({'value': '\n'.join([r.name for r in NpcRace.objects.all().order_by('name')])})
-            elif attribute == 'occupation' or attribute == 'name':
-                form = SelectCategoryForAttributeForm()
-                form.refresh_fields(attribute)
+        if len(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)) > 0:
+            form = SelectCategoryForAttributeForm()
+            form.refresh_fields(attribute)
+        else:
+            form = EditOptionalTextFieldForm({'value': '\n'.join([r.name for r in NpcRace.objects.all().order_by('name')])})
 
     context = {
         'form': form,
@@ -753,37 +737,23 @@ def manage_randomizer_options(request, thing_type, attribute):
 
 
 def manage_randomizer_options_for_category(request, thing_type, attribute, category):
-    form = EditOptionalTextFieldForm()
+    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
+    randomizer_attribute_category = get_object_or_404(RandomizerAttributeCategory,
+                                                      attribute=randomizer_attribute,
+                                                      name__iexact=category)
     if request.method == 'POST':
-        if thing_type == 'NPC':
-            if attribute == 'occupation':
-                form = EditOptionalTextFieldForm(request.POST)
-                occupation_type = get_object_or_404(NpcOccupationType, name=category)
-                if form.is_valid():
-                    NpcOccupation.objects.filter(occupation_type=occupation_type).delete()
-                    for occupation in form.cleaned_data['value'].split('\n'):
-                        if occupation:
-                            npc_occupation = NpcOccupation(name=occupation.strip(), occupation_type=occupation_type)
-                            npc_occupation.save()
-                    return HttpResponseRedirect(reverse('campaign:list_everything'))
-            elif attribute == 'name':
-                form = EditOptionalTextFieldForm(request.POST)
-                race = get_object_or_404(NpcRace, name=category)
-                if form.is_valid():
-                    NpcName.objects.filter(npc_race=race).delete()
-                    for name in set(form.cleaned_data['value'].split('\n')):
-                        if name:
-                            npc_name = NpcName(name=name.strip(), npc_race=race)
-                            npc_name.save()
-                    return HttpResponseRedirect(reverse('campaign:list_everything'))
+        form = EditOptionalTextFieldForm(request.POST)
+        if form.is_valid():
+            RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category).delete()
+            for option in form.cleaned_data['value'].split('\n'):
+                option = option.strip()
+                if option:
+                    randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
+                                                                                             name=option)
+                    randomizer_attribute_category_option.save()
+            return HttpResponseRedirect(reverse('campaign:list_everything'))
     else:
-        if thing_type == 'NPC':
-            if attribute == 'occupation':
-                occupation_type = get_object_or_404(NpcOccupationType, name=category)
-                form = EditOptionalTextFieldForm({'value': '\n'.join([r.name for r in NpcOccupation.objects.filter(occupation_type=occupation_type).order_by('name')])})
-            elif attribute == 'name':
-                race = get_object_or_404(NpcRace, name=category)
-                form = EditOptionalTextFieldForm({'value': '\n'.join([n.name for n in NpcName.objects.filter(npc_race=race).order_by('name')])})
+        form = EditOptionalTextFieldForm({'value': '\n'.join([o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category).order_by('name')])})
 
     context = {
         'form': form,

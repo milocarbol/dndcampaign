@@ -131,3 +131,47 @@ class NpcOccupation(models.Model):
 
     def __str__(self):
         return '[{0}] {1}'.format(self.occupation_type.name, self.name)
+
+
+class RandomizerAttribute(models.Model):
+    name = models.CharField(max_length=50)
+    thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('name', 'thing_type'))
+
+    def __str__(self):
+        return '[{0}] {1}'.format(self.thing_type.name, self.name)
+
+
+class RandomizerAttributeOption(models.Model):
+    name = models.CharField(max_length=50)
+    attribute = models.ForeignKey(RandomizerAttribute, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('name', 'attribute'))
+
+    def __str__(self):
+        return '[{0}] {1}'.format(self.attribute.name, self.name)
+
+
+class RandomizerAttributeCategory(models.Model):
+    name = models.CharField(max_length=50)
+    attribute = models.ForeignKey(RandomizerAttribute, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('name', 'attribute'))
+
+    def __str__(self):
+        return '[{0}] {1}'.format(self.attribute.name, self.name)
+
+
+class RandomizerAttributeCategoryOption(models.Model):
+    name = models.CharField(max_length=50)
+    category = models.ForeignKey(RandomizerAttributeCategory, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('name', 'category'))
+
+    def __str__(self):
+        return '[{0}] {1}: {2}'.format(self.category.attribute.name, self.category.name, self.name)
