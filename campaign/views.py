@@ -745,7 +745,7 @@ def manage_randomizer_options(request, thing_type, attribute):
             form = EditOptionalTextFieldForm(request.POST)
             if form.is_valid():
                 RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).delete()
-                for option in form.cleaned_data['value'].split('\n'):
+                for option in set(form.cleaned_data['value'].split('\n')):
                     option = option.strip()
                     if option:
                         randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=option)
@@ -775,7 +775,7 @@ def manage_randomizer_options_for_category(request, thing_type, attribute, categ
         form = EditOptionalTextFieldForm(request.POST)
         if form.is_valid():
             RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category).delete()
-            for option in form.cleaned_data['value'].split('\n'):
+            for option in set(form.cleaned_data['value'].split('\n')):
                 option = option.strip()
                 if option:
                     randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
