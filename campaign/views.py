@@ -712,13 +712,13 @@ def get_random_attribute(request, thing_type, attribute):
 def get_random_attribute_raw(thing_type, attribute):
     randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
     if randomizer_attribute.concatenate_results:
-        categories = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)
+        categories = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')
         result = ''
         if categories:
             for category in categories:
                 option = get_random_attribute_in_category_raw(thing_type, attribute, category.name)
                 if option:
-                    result += '{0}:\n\t{1}\n\n'.format(category.name, option)
+                    result += '{0}:\n\t{1}\n'.format(category.name, option)
         if result:
             return result
         else:

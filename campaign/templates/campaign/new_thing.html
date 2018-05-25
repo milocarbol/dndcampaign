@@ -7,20 +7,13 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-sm-6 offset-sm-3">
+        <div class="col-sm-6 offset-sm-2">
             <form action="{% url 'campaign:new_thing' thing_type %}" method="post">
                 {% csrf_token %}
                 {% for field in thing_form %}
                     <div class="row form-group">
-                        <div class="col-sm-2">
-                            {{ field.label_tag }}
-                        </div>
-                        <div class="col-sm-2">
-                            {{ field }}
-                            <p>{{ field.errors }}</p>
-                        </div>
                         {% if field.name in allow_random_by_category %}
-                            <div class="col-sm-2 offset-sm-4">
+                            <div class="col-sm-3">
                                 <div class="dropdown">
                                     <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         Randomize
@@ -37,10 +30,21 @@
                                 </div>
                             </div>
                         {% elif field.name in allow_random %}
-                            <div class="col-sm-2 offset-sm-4">
+                            <div class="col-sm-3">
                                 <button id="{{ field.name }}" type="button" class="btn btn-secondary randomizer">Randomize</button>
                             </div>
                         {% endif %}
+                        {% if field.name in allow_random_by_category or field.name in allow_random %}
+                            <div class="col-sm-2">
+                        {% else %}
+                            <div class="col-sm-2 offset-3">
+                        {% endif %}
+                            {{ field.label_tag }}
+                        </div>
+                        <div class="col-sm-2">
+                            {{ field }}
+                            <p>{{ field.errors }}</p>
+                        </div>
                     </div>
                 {% endfor %}
                 <div class="row">
