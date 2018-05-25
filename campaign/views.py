@@ -300,15 +300,17 @@ def import_campaign(request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             save_campaign(campaign=campaign, json_file=request.FILES['file'].read().decode('UTF-8'))
-            return HttpResponseRedirect('/campaign')
+            return HttpResponseRedirect(reverse('campaign:list_everything'))
         else:
-            print(request.POST)
+            print(form.errors)
     else:
-
-        context = {
-            'form': UploadFileForm()
-        }
-        return render(request, 'campaign/import.html', build_context(context))
+        form = UploadFileForm()
+    context = {
+        'header': 'Upload campaign data for {0}'.format(campaign.name),
+        'url': reverse('campaign:import'),
+        'form': form
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def save_campaign(campaign, json_file):
@@ -337,6 +339,97 @@ def save_campaign(campaign, json_file):
             thing_object.children.add(Thing.objects.get(campaign=campaign, name=child))
         thing_object.save()
 
+
+def export_settings(request):
+    data = []
+    for thing_type in ThingType.objects.all():
+        attributes = []
+        for attribute in RandomizerAttribute.objects.filter(thing_type=thing_type).order_by('name'):
+            categories = []
+            for category in RandomizerAttributeCategory.objects.filter(attribute=attribute).order_by('name'):
+                category_options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=category).order_by('name')]
+                categories.append({
+                    'name': category.name,
+                    'show': category.show,
+                    'can_combine_with_self': category.can_combine_with_self,
+                    'max_options': category.max_options_to_use,
+                    'options': category_options
+                })
+            options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
+            attribute_data = {
+                'name': attribute.name,
+                'concatenate_results': attribute.concatenate_results
+            }
+            if categories:
+                attribute_data['categories'] = categories
+            if options:
+                attribute_data['options'] = options
+            attributes.append(attribute_data)
+        if attributes:
+            data.append({
+                'name': thing_type.name,
+                'attributes': attributes
+            })
+
+    data = {
+        'thing_types': data,
+    }
+
+    response = JsonResponse(data)
+    response['Content-Disposition'] = 'attachment; filename="settings.json"'
+
+    return response
+
+
+def import_settings(request):
+    if request.method == 'POST':
+        form = UploadFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            save_settings(json_file=request.FILES['file'].read().decode('UTF-8'))
+            return HttpResponseRedirect(reverse('campaign:list_everything'))
+        else:
+            print(form.errors)
+    else:
+        form = UploadFileForm()
+    context = {
+        'header': 'Import settings',
+        'url': reverse('campaign:import_settings'),
+        'form': form
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def save_settings(json_file):
+    data = json.loads(json_file)
+    for thing_type_data in data['thing_types']:
+        thing_type = ThingType.objects.get(name=thing_type_data['name'])
+        for attribute in thing_type_data['attributes']:
+            RandomizerAttribute.objects.filter(thing_type=thing_type, name=attribute['name']).delete()
+            randomizer_attribute = RandomizerAttribute(thing_type=thing_type,
+                                                       name=attribute['name'],
+                                                       concatenate_results=attribute['concatenate_results'])
+            randomizer_attribute.save()
+
+            if 'options' in attribute:
+                for attribute_option in attribute['options']:
+                    randomizer_attribute_option = RandomizerAttributeOption(attribute=randomizer_attribute,
+                                                                            name=attribute_option)
+                    randomizer_attribute_option.save()
+
+            if 'categories' in attribute:
+                for attribute_category in attribute['categories']:
+                    randomizer_attribute_category = RandomizerAttributeCategory(attribute=randomizer_attribute,
+                                                                                name=attribute_category['name'],
+                                                                                show=attribute_category['show'],
+                                                                                can_combine_with_self=attribute_category['can_combine_with_self'],
+                                                                                max_options_to_use=attribute_category['max_options'])
+                    randomizer_attribute_category.save()
+
+                    for category_option in attribute_category['options']:
+                        randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
+                                                                                                 name=category_option)
+                        randomizer_attribute_category_option.save()
+    return HttpResponseRedirect(reverse('campaign:list_everything'))
 
 def move_thing(request, name):
     campaign = Campaign.objects.get(is_active=True)
