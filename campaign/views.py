@@ -717,6 +717,10 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
                                                       name__iexact=category)
     randomizer_attribute_category_2 = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
                                                                                  name__iexact=category + '_2')
+    randomizer_attribute_category_synonym_first = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
+                                                                                             name__iexact=category + '_synonym_first')
+    randomizer_attribute_category_synonym_last = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
+                                                                                             name__iexact=category + '_synonym_last')
 
     result = ''
     result_and = ''
@@ -740,6 +744,27 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
     if result and result_and:
         if random.choice([0, 1]) == 0:
             result = result_and
+
+    use_first_synonym = False
+    use_last_synonym = False
+    if randomizer_attribute_category_synonym_first and randomizer_attribute_category_synonym_last:
+        if random.choice([0, 1]) == 0:
+            use_first_synonym = True
+        else:
+            use_last_synonym = True
+    elif randomizer_attribute_category_synonym_first:
+        use_first_synonym = True
+    elif randomizer_attribute_category_synonym_last:
+        use_last_synonym = True
+    if use_first_synonym:
+        synonyms = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category_synonym_first[0])]
+        synonym = random.choice(synonyms)
+        result = synonym + ' ' + result
+    elif use_last_synonym:
+        synonyms = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category_synonym_last[0])]
+        synonym = random.choice(synonyms)
+        result += ' ' + synonym
+
     if result:
         return JsonResponse({
             'name': result
