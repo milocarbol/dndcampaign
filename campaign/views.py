@@ -415,11 +415,14 @@ def create_new_location(request):
 
     form.refresh_fields()
 
-    allow_random = [
-    ]
-    allow_random_by_category = [
-        'name'
-    ]
+    all_attributes = RandomizerAttribute.objects.filter(thing_type__name='Location')
+    allow_random = []
+    allow_random_by_category = []
+    for attr in all_attributes:
+        if attr.concatenate_results or len(RandomizerAttributeCategory.objects.filter(attribute=attr)) == 0:
+            allow_random.append(attr.name.lower())
+        else:
+            allow_random_by_category.append(attr.name.lower())
     randomizer_categories = []
     for attribute in allow_random_by_category:
         randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='Location', name__iexact=attribute)
@@ -477,11 +480,14 @@ def create_new_faction(request):
 
     form.refresh_fields()
 
-    allow_random = [
-    ]
-    allow_random_by_category = [
-        'name'
-    ]
+    all_attributes = RandomizerAttribute.objects.filter(thing_type__name='Faction')
+    allow_random = []
+    allow_random_by_category = []
+    for attr in all_attributes:
+        if attr.concatenate_results or len(RandomizerAttributeCategory.objects.filter(attribute=attr)) == 0:
+            allow_random.append(attr.name.lower())
+        else:
+            allow_random_by_category.append(attr.name.lower())
     randomizer_categories = []
     for attribute in allow_random_by_category:
         randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='Faction', name__iexact=attribute)
@@ -538,14 +544,14 @@ def create_new_npc(request):
 
     form.refresh_fields()
 
-    allow_random = [
-        'race',
-        'description'
-    ]
-    allow_random_by_category = [
-        'occupation',
-        'name'
-    ]
+    all_attributes = RandomizerAttribute.objects.filter(thing_type__name='NPC')
+    allow_random = []
+    allow_random_by_category = []
+    for attr in all_attributes:
+        if attr.concatenate_results or len(RandomizerAttributeCategory.objects.filter(attribute=attr)) == 0:
+            allow_random.append(attr.name.lower())
+        else:
+            allow_random_by_category.append(attr.name.lower())
     randomizer_categories = []
     for attribute in allow_random_by_category:
         randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='NPC', name__iexact=attribute)
@@ -553,7 +559,6 @@ def create_new_npc(request):
             'field_name': attribute,
             'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute, show=True).order_by('name')]
         })
-
     context = {
         'thing_form': form,
         'thing_type': 'NPC',
