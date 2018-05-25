@@ -721,9 +721,12 @@ def get_random_attribute_raw(thing_type, attribute):
         result = ''
         if categories:
             for category in categories:
-                option = get_random_attribute_in_category_raw(thing_type, attribute, category.name)
-                if option:
-                    result += '{0}:\n\t{1}\n'.format(category.name, option)
+                result += '{0}:\n*-\n'.format(category.name)
+                for i in range(0, random.randint(1, category.max_options_to_use)):
+                    option = get_random_attribute_in_category_raw(thing_type, attribute, category.name)
+                    if option:
+                        result += '- {0}-\n'.format(option)
+                result += '-*\n'
         if result:
             return result
         else:

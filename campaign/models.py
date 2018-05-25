@@ -111,6 +111,7 @@ class RandomizerAttributeCategory(models.Model):
     attribute = models.ForeignKey(RandomizerAttribute, on_delete=models.CASCADE)
     show = models.BooleanField(default=True)
     can_combine_with_self = models.BooleanField(default=False)
+    max_options_to_use = models.IntegerField(default=1)
 
     class Meta:
         unique_together = (('name', 'attribute'))
