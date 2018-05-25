@@ -5,7 +5,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.urls import reverse
 from operator import methodcaller
 
-from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, NpcOccupationType, NpcOccupation, NpcRace, NpcAppearance, NpcPersonalityTrait, NpcName, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption
 from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm
 
 
@@ -539,7 +539,8 @@ def create_new_npc(request):
     form.refresh_fields()
 
     allow_random = [
-        'race'
+        'race',
+        'description'
     ]
     allow_random_by_category = [
         'occupation',
@@ -699,18 +700,48 @@ def set_attribute(request, name, attribute_name):
 
 
 def get_random_attribute(request, thing_type, attribute):
-    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
-    options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute)]
-
-    if options:
+    result = get_random_attribute_raw(thing_type, attribute)
+    if result:
         return JsonResponse({
-            'name': random.choice(options)
+            'name': result
         })
     else:
         return JsonResponse({})
 
 
+def get_random_attribute_raw(thing_type, attribute):
+    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
+    if randomizer_attribute.concatenate_results:
+        categories = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)
+        result = ''
+        if categories:
+            for category in categories:
+                option = get_random_attribute_in_category_raw(thing_type, attribute, category.name)
+                if option:
+                    result += '{0}:\n\t{1}\n\n'.format(category.name, option)
+        if result:
+            return result
+        else:
+            return None
+    else:
+        options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute)]
+        if options:
+            return random.choice(options)
+        else:
+            return None
+
+
 def get_random_attribute_in_category(request, thing_type, attribute, category):
+    result = get_random_attribute_in_category_raw(thing_type, attribute, category)
+    if result:
+        return JsonResponse({
+            'name': result
+        })
+    else:
+        return JsonResponse({})
+
+
+def get_random_attribute_in_category_raw(thing_type, attribute, category):
     randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
     randomizer_attribute_category = get_object_or_404(RandomizerAttributeCategory,
                                                       attribute=randomizer_attribute,
@@ -766,11 +797,9 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
         result += ' ' + synonym
 
     if result:
-        return JsonResponse({
-            'name': result
-        })
+        return result
     else:
-        return JsonResponse({})
+        return None
 
 
 def change_campaign(request, name):
@@ -797,8 +826,7 @@ def manage_randomizer_options(request, thing_type, attribute):
             form = EditOptionalTextFieldForm(request.POST)
             if form.is_valid():
                 RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).delete()
-                for option in set(form.cleaned_data['value'].split('\n')):
-                    option = option.strip()
+                for option in set([o.strip() for o in form.cleaned_data['value'].split('\n')]):
                     if option:
                         randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=option)
                         randomizer_option.save()
@@ -827,9 +855,9 @@ def manage_randomizer_options_for_category(request, thing_type, attribute, categ
         form = EditOptionalTextFieldForm(request.POST)
         if form.is_valid():
             RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category).delete()
-            for option in set(form.cleaned_data['value'].split('\n')):
-                option = option.strip()
+            for option in set([o.strip() for o in form.cleaned_data['value'].split('\n')]):
                 if option:
+                    print(option)
                     randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
                                                                                              name=option)
                     randomizer_attribute_category_option.save()

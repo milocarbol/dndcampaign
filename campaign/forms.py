@@ -1,7 +1,7 @@
 from django import forms
 from django.shortcuts import get_object_or_404
 
-from .models import Thing, Attribute, AttributeValue, Campaign, NpcOccupationType, NpcRace, RandomizerAttribute, RandomizerAttributeCategory
+from .models import Thing, Attribute, AttributeValue, Campaign, RandomizerAttribute, RandomizerAttributeCategory
 
 
 ATTITUDE_CHOICES = [
