@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from .forms import ChangeCampaignForm, CopyToCampaignForm
-from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounterType, RandomEncounter, RandomizerAttribute, RandomizerAttributeOption, RandomizerAttributeCategoryOption, RandomizerAttributeCategory
+from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounterType, RandomEncounter, RandomizerAttribute, RandomizerAttributeOption, RandomizerAttributeCategoryOption, RandomizerAttributeCategory, RandomAttribute
 
 
 class ThingAdmin(admin.ModelAdmin):
@@ -95,3 +95,4 @@ admin.site.register(RandomizerAttribute)
 admin.site.register(RandomizerAttributeOption)
 admin.site.register(RandomizerAttributeCategory)
 admin.site.register(RandomizerAttributeCategoryOption)
+admin.site.register(RandomAttribute)
