@@ -34,25 +34,31 @@
                 </div>
             {% endif %}
             {% if thing.random_attributes %}
-                <div class="col-sm-8">
-                    <table class="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th scope="row">Rumours</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for random_attribute in thing.random_attributes %}
+                {% for category in thing.random_attributes %}
+                    <div class="col-sm-8">
+                        <table class="table table-bordered table-sm">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        {{ random_attribute.text }}
-                                        <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:delete_random' thing.name random_attribute.id %}" role="button"> - </a>
-                                    </td>
+                                    <th scope="row">
+                                        {{ category.category }}s
+                                        <a class="btn btn-success btn-sm float-right" href="{% url 'campaign:add_one_random' thing.name category.attribute category.category %}" role="button"> + </a>
+                                    </th>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {% for random_attribute in category.attributes %}
+                                    <tr>
+                                        <td>
+                                            {{ random_attribute.text }}
+                                            <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:delete_random' thing.name random_attribute.id %}" role="button"> - </a>
+                                            <a class="btn btn-secondary btn-sm float-right" href="{% url 'campaign:edit_random' thing.name random_attribute.id %}" role="button">Edit</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endfor %}
             {% endif %}
         </div>
     {% endif %}
@@ -107,8 +113,12 @@
                             <a class="dropdown-item" href="{% url 'campaign:edit_encounters' thing.name encounter_type.encounter_type %}">Edit random {{ encounter_type.encounter_type }} encounters</a>
                         {% endfor %}
                     {% endif %}
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="{% url 'campaign:add_random' thing.name 'description' 'rumour' %}">Generate Rumours</a>
+                    {% if thing.randomizable_attributes %}
+                        <div class="dropdown-divider"></div>
+                        {% for randomizer in thing.randomizable_attributes %}
+                            <a class="dropdown-item" href="{% url 'campaign:add_random' thing.name randomizer.attribute randomizer.category %}">Generate {{ randomizer.category }}s</a>
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
         </div>

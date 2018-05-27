@@ -37,6 +37,7 @@ class NewLocationForm(forms.Form):
     location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
     factions = forms.ModelMultipleChoiceField(label='Factions', queryset=Thing.objects.all(), required=False)
     npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
+    generate_rumours = forms.BooleanField(label='Generate rumours', required=False)
 
     def refresh_fields(self):
         self.fields['location'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')
@@ -71,6 +72,7 @@ class NewNpcForm(forms.Form):
     factions = forms.ModelMultipleChoiceField(label='Member of', queryset=Thing.objects.all(), required=False)
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
     link = forms.CharField(label='D&D Beyond URL', required=False)
+    generate_hooks = forms.BooleanField(label='Generate hooks', required=False)
 
     def refresh_fields(self):
         self.fields['location'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')

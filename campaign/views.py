@@ -150,16 +150,32 @@ def detail(request, name):
 
     editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type).order_by('name')]
 
+    randomizable_attributes = []
+    random_attributes = []
+    for a in RandomizerAttribute.objects.filter(thing_type=thing.thing_type).order_by('name'):
+        categories = RandomizerAttributeCategory.objects.filter(attribute=a, can_randomize_later=True).order_by('name')
+        for category in categories:
+            randomizable_attributes.append({
+                'attribute': a.name,
+                'category': category.name
+            })
+            random_attributes.append({
+                'attribute': a.name,
+                'category': category.name,
+                'attributes': [{'text': r.text, 'id': r.pk} for r in RandomAttribute.objects.filter(randomizer_attribute_category=category, thing=thing).order_by('text')]
+            })
+
     thing_info = {
         'name': thing.name,
         'description': thing.description,
         'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
-        'random_attributes': [{'text': r.text, 'id': r.pk} for r in RandomAttribute.objects.filter(thing=thing).order_by('text')],
+        'random_attributes': random_attributes,
         'encounters': encounters,
         'display_encounters': display_encounters,
         'enable_random_encounters': thing.thing_type.name == 'Location',
-        'editable_attributes': editable_attributes
+        'editable_attributes': editable_attributes,
+        'randomizable_attributes': randomizable_attributes
     }
 
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
@@ -503,6 +519,16 @@ def create_new_location(request):
                 new_parent.children.add(thing)
                 new_parent.save()
 
+            if form.cleaned_data['generate_rumours']:
+                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Description')
+                attribute_category = get_object_or_404(RandomizerAttributeCategory, attribute=randomizer_attribute, name='Rumour')
+
+                for i in range(0, random.randint(1, attribute_category.max_options_to_use)):
+                    option = get_random_attribute_in_category_raw(thing.thing_type, randomizer_attribute.name, attribute_category.name)
+                    if option:
+                        random_attribute = RandomAttribute(thing=thing, randomizer_attribute_category=attribute_category, text=option)
+                        random_attribute.save()
+
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
         form = NewLocationForm()
@@ -631,6 +657,16 @@ def create_new_npc(request):
             if form.cleaned_data['link']:
                 link = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Link'), value=form.cleaned_data['link'])
                 link.save()
+
+            if form.cleaned_data['generate_hooks']:
+                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Description')
+                attribute_category = get_object_or_404(RandomizerAttributeCategory, attribute=randomizer_attribute, name='Hook')
+
+                for i in range(0, random.randint(1, attribute_category.max_options_to_use)):
+                    option = get_random_attribute_in_category_raw(thing.thing_type, randomizer_attribute.name, attribute_category.name)
+                    if option:
+                        random_attribute = RandomAttribute(thing=thing, randomizer_attribute_category=attribute_category, text=option)
+                        random_attribute.save()
 
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
@@ -987,6 +1023,55 @@ def generate_random_attributes_for_thing(request, name, attribute, attribute_cat
             random_attribute = RandomAttribute(thing=thing, randomizer_attribute_category=attribute_category, text=option)
             random_attribute.save()
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+
+
+def add_random_attribute_for_thing(request, name, attribute, attribute_category):
+    campaign = get_object_or_404(Campaign, is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name__iexact=attribute)
+    attribute_category = get_object_or_404(RandomizerAttributeCategory, attribute=randomizer_attribute, name__iexact=attribute_category)
+
+    if request.method == 'POST':
+        form = EditOptionalTextFieldForm(request.POST)
+        if form.is_valid():
+            if form.cleaned_data['value']:
+                random_attribute = RandomAttribute(thing=thing, randomizer_attribute_category=attribute_category, text=form.cleaned_data['value'])
+                random_attribute.save()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = EditOptionalTextFieldForm()
+
+    context = {
+        'form': form,
+        'header': 'Add {0} for {1}'.format(attribute_category.name, thing.name),
+        'url': reverse('campaign:add_one_random', args=(thing.name, randomizer_attribute.name, attribute_category.name))
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def edit_random_attribute_for_thing(request, name, random_attribute_id):
+    campaign = get_object_or_404(Campaign, is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+    random_attribute = get_object_or_404(RandomAttribute, thing=thing, pk=random_attribute_id)
+
+    if request.method == 'POST':
+        form = EditOptionalTextFieldForm(request.POST)
+        if form.is_valid():
+            if form.cleaned_data['value']:
+                random_attribute.text = form.cleaned_data['value']
+                random_attribute.save()
+            else:
+                random_attribute.delete()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = EditOptionalTextFieldForm({'value': random_attribute.text})
+
+    context = {
+        'form': form,
+        'header': 'Edit {0} for {1}'.format(random_attribute.randomizer_attribute_category.name, thing.name),
+        'url': reverse('campaign:edit_random', args=(thing.name, random_attribute_id))
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def delete_random_attribute_for_thing(request, name, random_attribute_id):
