@@ -332,7 +332,7 @@ def import_campaign(request):
 
 def save_campaign(campaign, json_file):
     Thing.objects.filter(campaign=campaign).delete()
-    AttributeValue.objects.all().delete()
+    AttributeValue.objects.filter(campaign=campaign).delete()
     data = json.loads(json_file)
     for thing in data['things']:
         thing_object = Thing(campaign=campaign, name=thing['name'], description=thing['description'], thing_type=ThingType.objects.get(name=thing['thing_type']))
