@@ -1,5 +1,5 @@
 function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker, beyond_url) {
-    $(".thing-description, .encounter").each(function() {
+    $(".thing-description, .encounter, .random_attribute").each(function() {
         var raw_description = "<p>" + $(this).text()
             .replace(/\n{2}/g, "</p><p>")
             .replace(/\*-/g, "<ul>")
