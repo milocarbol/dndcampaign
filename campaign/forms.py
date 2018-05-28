@@ -1,7 +1,7 @@
 from django import forms
 from django.shortcuts import get_object_or_404
 
-from .models import Thing, Attribute, AttributeValue, Campaign, RandomizerAttribute, RandomizerAttributeCategory
+from .models import Thing, Attribute, AttributeValue, Campaign, RandomizerAttribute, RandomizerAttributeCategory, GeneratorObject
 
 
 ATTITUDE_CHOICES = [
@@ -151,3 +151,10 @@ class SelectCategoryForAttributeForm(forms.Form):
         attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute_name)
         choices = [(c.name, c.name) for c in RandomizerAttributeCategory.objects.filter(attribute=attribute).order_by('name')]
         self.fields['category'].choices = choices
+
+
+class SelectGeneratorObject(forms.Form):
+    generator_object = forms.ModelChoiceField(label='Object', queryset=GeneratorObject.objects.all())
+
+    def refresh_fields(self, thing_type):
+        self.fields['generator_object'].queryset = GeneratorObject.objects.filter(thing_type=thing_type)

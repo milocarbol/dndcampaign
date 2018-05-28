@@ -30,9 +30,13 @@
                                 Create
                             </a>
                             <div class="dropdown-menu" aria-labelledby="manageDropdown">
-                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'Location' %}">New Location</a>
                                 <a class="dropdown-item" href="{% url 'campaign:new_thing' 'Faction' %}">New Faction</a>
+                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'Location' %}">New Location</a>
                                 <a class="dropdown-item" href="{% url 'campaign:new_thing' 'NPC' %}">New NPC</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{% url 'campaign:select_generator' 'Faction' %}">Random Faction</a>
+                                <a class="dropdown-item" href="{% url 'campaign:select_generator' 'Location' %}">Random Location</a>
+                                <a class="dropdown-item" href="{% url 'campaign:select_generator' 'NPC' %}">Random NPC</a>
                             </div>
                         </li>
                         <li class="nav-item dropdown">

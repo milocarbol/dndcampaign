@@ -86,6 +86,7 @@ class RandomEncounter(models.Model):
 class RandomizerAttribute(models.Model):
     name = models.CharField(max_length=50)
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE)
+    category_parameter = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     concatenate_results = models.BooleanField(default=False)
     can_randomize_later = models.BooleanField(default=False)
 
@@ -114,6 +115,7 @@ class RandomizerAttributeCategory(models.Model):
     can_combine_with_self = models.BooleanField(default=False)
     max_options_to_use = models.IntegerField(default=1)
     can_randomize_later = models.BooleanField(default=False)
+    must_be_unique = models.BooleanField(default=True)
 
     class Meta:
         unique_together = (('name', 'attribute'))
@@ -140,3 +142,43 @@ class RandomAttribute(models.Model):
 
     def __str__(self):
         return '[{0}] {1}...'.format(self.thing.name, self.text[:20])
+
+
+class GeneratorObject(models.Model):
+    name = models.CharField(max_length=50)
+    thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE)
+    inherit_settings_from = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+    attribute_for_container = models.CharField(max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class GeneratorObjectContains(models.Model):
+    generator_object = models.ForeignKey(GeneratorObject, on_delete=models.CASCADE, related_name='generator_object')
+    contained_object = models.ForeignKey(GeneratorObject, on_delete=models.CASCADE, related_name='contained_object')
+    min_objects = models.IntegerField(default=1)
+    max_objects = models.IntegerField(default=5)
+
+    def __str__(self):
+        return '{0} contains {1}-{2} {3}s'.format(self.generator_object.name, self.min_objects, self.max_objects, self.contained_object.name)
+
+
+class GeneratorObjectFieldToRandomizerAttribute(models.Model):
+    generator_object = models.ForeignKey(GeneratorObject, on_delete=models.CASCADE)
+    field_name = models.CharField(max_length=50, null=True, blank=True)
+    randomizer_attribute = models.ForeignKey(RandomizerAttribute, on_delete=models.CASCADE, null=True, blank=True)
+    randomizer_attribute_category = models.ForeignKey(RandomizerAttributeCategory, on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        if self.field_name:
+            if self.randomizer_attribute:
+                return '{0}: {1} = {2}'.format(self.generator_object.name, self.field_name, self.randomizer_attribute)
+            else:
+                return '{0}: {1} = {2}'.format(self.generator_object.name, self.field_name, self.randomizer_attribute_category)
+        elif self.randomizer_attribute:
+            return '{0}: add {1}'.format(self.generator_object.name, self.randomizer_attribute)
+        elif self.randomizer_attribute_category:
+            return '{0}: add {1}'.format(self.generator_object.name, self.randomizer_attribute_category)
+        else:
+            return '{0}: NOT MAPPED'
