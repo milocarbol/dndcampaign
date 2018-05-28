@@ -519,6 +519,15 @@ def create_new_location(request):
                 new_parent.children.add(thing)
                 new_parent.save()
 
+            if form.cleaned_data['ruler']:
+                ruler = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Ruler'), value=form.cleaned_data['ruler'])
+                ruler.save()
+
+            if form.cleaned_data['population']:
+                randomized_population = '{:,}'.format(int(int(form.cleaned_data['population'])*random.randint(5, 15)/10))
+                population = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Population'), value=str(randomized_population))
+                population.save()
+
             if form.cleaned_data['generate_rumours']:
                 randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Description')
                 attribute_category = get_object_or_404(RandomizerAttributeCategory, attribute=randomizer_attribute, name='Rumour')
@@ -579,7 +588,7 @@ def create_new_faction(request):
                 new_parent.save()
 
             if form.cleaned_data['leader']:
-                leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'].name)
+                leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'])
                 leader.save()
 
             if form.cleaned_data['attitude']:

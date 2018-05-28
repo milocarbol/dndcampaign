@@ -17,6 +17,14 @@ MAGNITUDE_CHOICES = [
     ('High', 'High')
 ]
 
+POPULATION_CHOICES = [
+    ('100', 'Hamlet'),
+    ('1000', 'Village'),
+    ('10000', 'Town'),
+    ('100000', 'City'),
+    ('500000', 'Metropolis')
+]
+
 
 class SearchForm(forms.Form):
     search_text = forms.CharField(label='Search', max_length=50, widget=forms.TextInput(attrs={
@@ -37,12 +45,15 @@ class NewLocationForm(forms.Form):
     location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
     factions = forms.ModelMultipleChoiceField(label='Factions', queryset=Thing.objects.all(), required=False)
     npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
+    ruler = forms.ModelChoiceField(label='Ruler', queryset=Thing.objects.all(), required=False)
+    population = forms.ChoiceField(label='Population', choices=POPULATION_CHOICES)
     generate_rumours = forms.BooleanField(label='Generate rumours', required=False)
 
     def refresh_fields(self):
         self.fields['location'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')
         self.fields['factions'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Faction').order_by('name')
         self.fields['npcs'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='NPC').order_by('name')
+        self.fields['ruler'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name__in=['NPC', 'Faction']).order_by('name')
 
 
 class NewFactionForm(forms.Form):
