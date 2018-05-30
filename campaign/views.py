@@ -1239,6 +1239,13 @@ def generate_thing(generator_object, campaign, parent_object=None):
         return None
 
     for attribute_value_data in fields_to_save['attribute_values']:
+        var_search = re.search(r'\$\{(.+)\}', attribute_value_data['value'])
+        if var_search:
+            variable = var_search.group(1)
+            if '.' in variable:
+                parts = variable.split('.')
+                if parts[0] == 'parent':
+                    attribute_value_data['value'] = re.sub(r'\$\{.+\}', getattr(parent_object, parts[1]), attribute_value_data['value'])
         attribute_value = AttributeValue(thing=thing, attribute=attribute_value_data['attribute'], value=attribute_value_data['value'])
         attribute_value.save()
 
