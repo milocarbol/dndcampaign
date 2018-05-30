@@ -1261,16 +1261,21 @@ def generate_thing(generator_object, campaign, parent_object=None):
             print('Adding {0} to {1}...'.format(child_object.name, thing.name))
             thing.children.add(child_object)
             thing.save()
-            if child.contained_object.attribute_for_container:
-                print('Setting {0} for {1} to {2}...'.format(child.contained_object.attribute_for_container, thing.name, child_object.name))
-                attribute = Attribute.objects.get(thing_type=thing.thing_type, name__iexact=child.contained_object.attribute_for_container)
+            attribute_for_container = ''
+            inherit_settings_from = child.contained_object.inherit_settings_from
+            while not attribute_for_container and inherit_settings_from:
+                attribute_for_container = inherit_settings_from.attribute_for_container
+                inherit_settings_from = inherit_settings_from.inherit_settings_from
+            if attribute_for_container:
+                print('Setting {0} for {1} to {2}...'.format(attribute_for_container, thing.name, child_object.name))
+                attribute = Attribute.objects.get(thing_type=thing.thing_type, name__iexact=attribute_for_container)
                 attribute_value = AttributeValue(thing=thing, attribute=attribute, value=child_object.name)
                 attribute_value.save()
 
                 var_search = re.search(r'\$\{(.+)\}', thing.name)
                 if var_search:
                     variable = var_search.group(1)
-                    if variable == child.contained_object.attribute_for_container:
+                    if variable == attribute_for_container:
                         new_name = re.sub(r'\$\{.+\}', child_object.name, thing.name)
                         print('Changing {0} to {1}'.format(thing.name, new_name))
                         thing.name = new_name
