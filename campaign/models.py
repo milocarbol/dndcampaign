@@ -89,6 +89,7 @@ class RandomizerAttribute(models.Model):
     category_parameter = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     concatenate_results = models.BooleanField(default=False)
     can_randomize_later = models.BooleanField(default=False)
+    must_be_unique = models.BooleanField(default=True)
 
     class Meta:
         unique_together = (('name', 'thing_type'))
@@ -116,6 +117,7 @@ class RandomizerAttributeCategory(models.Model):
     max_options_to_use = models.IntegerField(default=1)
     can_randomize_later = models.BooleanField(default=False)
     must_be_unique = models.BooleanField(default=True)
+    use_values_from = models.ManyToManyField('self', blank=True, symmetrical=False)
 
     class Meta:
         unique_together = (('name', 'attribute'))

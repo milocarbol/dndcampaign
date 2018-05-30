@@ -855,7 +855,11 @@ def get_random_attribute(request, thing_type, attribute):
 
 
 def get_random_attribute_raw(thing_type, attribute):
-    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
+    try:
+        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name__iexact=thing_type, name__iexact=attribute)
+    except RandomizerAttribute.DoesNotExist:
+        print('Invalid randomizer attribute: {0}'.format(attribute))
+        raise Http404
     if randomizer_attribute.concatenate_results:
         categories = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')
         result = ''
@@ -890,16 +894,27 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
 
 
 def get_random_attribute_in_category_raw(thing_type, attribute, category):
-    randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type__name__iexact=thing_type, name__iexact=attribute)
-    randomizer_attribute_category = get_object_or_404(RandomizerAttributeCategory,
-                                                      attribute=randomizer_attribute,
-                                                      name__iexact=category)
+    try:
+        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name__iexact=thing_type, name__iexact=attribute)
+    except RandomizerAttribute.DoesNotExist:
+        print('Invalid randomizer attribute: {0}'.format(attribute))
+        raise Http404
+
+    try:
+        randomizer_attribute_category = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute,
+                                                                                name__iexact=category)
+        if randomizer_attribute_category.use_values_from.all():
+            randomizer_attribute_category = random.choice(randomizer_attribute_category.use_values_from.all())
+    except RandomizerAttributeCategory.DoesNotExist:
+        print('Invalid randomizer attribute category for {0}: {1}'.format(attribute, category))
+        raise Http404
+
     randomizer_attribute_category_2 = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
-                                                                                 name__iexact=category + '_2')
+                                                                                 name__iexact=randomizer_attribute_category.name + '_2')
     randomizer_attribute_category_synonym_first = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
-                                                                                             name__iexact=category + '_synonym_first')
+                                                                                             name__iexact=randomizer_attribute_category.name + '_synonym_first')
     randomizer_attribute_category_synonym_last = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
-                                                                                             name__iexact=category + '_synonym_last')
+                                                                                             name__iexact=randomizer_attribute_category.name + '_synonym_last')
 
     result = ''
     result_and = ''
@@ -1137,7 +1152,19 @@ def generate_thing(generator_object, campaign, parent_object=None):
     field_mappings = []
     inherit_settings_from = generator_object
     while inherit_settings_from is not None:
-        field_mappings.extend(GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=inherit_settings_from))
+        inherited_settings = GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=inherit_settings_from)
+        for inherited_setting in inherited_settings:
+            is_overridden = False
+            for field_mapping in field_mappings:
+                if field_mapping.field_name and field_mapping.field_name == inherited_setting.field_name \
+                        or field_mapping.randomizer_attribute \
+                                and field_mapping.randomizer_attribute == inherited_setting.randomizer_attribute \
+                        or field_mapping.randomizer_attribute_category and inherited_setting.randomizer_attribute_category \
+                                and field_mapping.randomizer_attribute_category.attribute == inherited_setting.randomizer_attribute_category.attribute:
+                    is_overridden = True
+                    break
+            if not is_overridden:
+                field_mappings.append(inherited_setting)
         inherit_settings_from = inherit_settings_from.inherit_settings_from
     for field_mapping in field_mappings:
         if field_mapping.randomizer_attribute:
@@ -1149,11 +1176,18 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     'value': parameter
                 })
                 value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
+                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(name=value)) > 0:
+                    print('Tried to use {0} but was in use'.format(value))
+                    value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
             else:
                 value = get_random_attribute_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
+                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(name=value)) > 0:
+                    print('Tried to use {0} but was in use'.format(value))
+                    value = get_random_attribute_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
         else:
             value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
             while field_mapping.randomizer_attribute_category.must_be_unique and len(Thing.objects.filter(name=value)) > 0:
+                print('Tried to use {0} but was in use'.format(value))
                 value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
 
         if field_mapping.field_name:
@@ -1199,6 +1233,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
             thing.save()
         else:
             print('Could not save {0}: likely a configuration error. Are all variables populated?'.format(fields_to_save))
+            return None
     except IntegrityError:
         print('Failed to save {0}: already exists.'.format(thing.name))
         return None
