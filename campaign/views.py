@@ -383,8 +383,8 @@ def export_settings(request):
             attribute_data = {
                 'name': attribute.name,
                 'concatenate_results': attribute.concatenate_results,
-                'can_randomize_later': category.can_randomize_later,
-                'must_be_unique': category.must_be_unique,
+                'can_randomize_later': attribute.can_randomize_later,
+                'must_be_unique': attribute.must_be_unique,
                 'categories': categories,
                 'options': [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
             }
@@ -484,6 +484,7 @@ def save_settings(json_file):
                                                                             show=attribute_category['show'],
                                                                             can_combine_with_self=attribute_category['can_combine_with_self'],
                                                                             max_options_to_use=attribute_category['max_options_to_use'],
+                                                                            can_randomize_later=attribute_category['can_randomize_later'],
                                                                             must_be_unique=attribute['must_be_unique'])
                 randomizer_attribute_category.save()
 
@@ -534,7 +535,7 @@ def save_settings(json_file):
         thing_type = ThingType.objects.get(name=generator_data['thing_type'])
         generator_object = GeneratorObject.objects.get(thing_type=thing_type, name=generator_data['name'])
 
-        if 'inherit_settings_from' in generator_data:
+        if generator_data['inherit_settings_from']:
             generator_object.inherit_settings_from = GeneratorObject.objects.get(thing_type=thing_type, name=generator_data['inherit_settings_from'])
             generator_object.save()
         for contains in generator_data['generator_object_contains']:
