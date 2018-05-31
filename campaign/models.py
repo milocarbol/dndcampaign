@@ -139,7 +139,6 @@ class RandomizerAttributeCategoryOption(models.Model):
 
 class RandomAttribute(models.Model):
     thing = models.ForeignKey(Thing, on_delete=models.CASCADE)
-    randomizer_attribute_category = models.ForeignKey(RandomizerAttributeCategory, on_delete=models.CASCADE)
     text = models.CharField(max_length=100)
 
     def __str__(self):

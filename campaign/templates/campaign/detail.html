@@ -34,33 +34,29 @@
                 </div>
             {% endif %}
             {% if thing.random_attributes %}
-                {% for category in thing.random_attributes %}
-                    {% if category.attributes %}
-                        <div class="col-sm-8">
-                            <table class="table table-bordered table-sm">
-                                <thead>
-                                    <tr>
-                                        <th scope="row">
-                                            {{ category.category }}s
-                                            <a class="btn btn-success btn-sm float-right" href="{% url 'campaign:add_one_random' thing.name category.attribute category.category %}" role="button"> + </a>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for random_attribute in category.attributes %}
-                                        <tr>
-                                            <td>
-                                                <div class="random_attribute">{{ random_attribute.text }}</div>
-                                                <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:delete_random' thing.name random_attribute.id %}" role="button"> - </a>
-                                                <a class="btn btn-secondary btn-sm float-right" href="{% url 'campaign:edit_random' thing.name random_attribute.id %}" role="button">Edit</a>
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% endif %}
-                {% endfor %}
+                <div class="col-sm-8">
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th scope="row">
+                                    Hooks
+                                    <a class="btn btn-success btn-sm float-right" href="{% url 'campaign:add_one_random' thing.name %}" role="button"> + </a>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for random_attribute in thing.random_attributes %}
+                                <tr>
+                                    <td>
+                                        <div class="random_attribute">{{ random_attribute.text }}</div>
+                                        <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:delete_random' thing.name random_attribute.id %}" role="button"> - </a>
+                                        <a class="btn btn-secondary btn-sm float-right" href="{% url 'campaign:edit_random' thing.name random_attribute.id %}" role="button">Edit</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% endif %}
         </div>
     {% endif %}
