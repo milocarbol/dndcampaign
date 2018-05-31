@@ -367,28 +367,29 @@ def export_settings(request):
             categories = []
             for category in RandomizerAttributeCategory.objects.filter(attribute=attribute).order_by('name'):
                 category_options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=category).order_by('name')]
+                use_values_from = []
+                for category_for_values in category.use_values_from.all():
+                    use_values_from.append('{0}.{1}.{2}'.format(thing_type.name, category_for_values.attribute.name, category_for_values.name))
                 categories.append({
                     'name': category.name,
                     'show': category.show,
                     'can_combine_with_self': category.can_combine_with_self,
-                    'max_options': category.max_options_to_use,
+                    'max_options_to_use': category.max_options_to_use,
+                    'can_randomize_later': category.can_randomize_later,
+                    'must_be_unique': category.must_be_unique,
+                    'use_values_from': use_values_from,
                     'options': category_options
                 })
-            options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
-            attribute_data = {
+            attributes.append({
                 'name': attribute.name,
-                'concatenate_results': attribute.concatenate_results
-            }
-            if categories:
-                attribute_data['categories'] = categories
-            if options:
-                attribute_data['options'] = options
-            attributes.append(attribute_data)
-        if attributes:
-            data.append({
-                'name': thing_type.name,
-                'attributes': attributes
+                'concatenate_results': attribute.concatenate_results,
+                'categories': categories,
+                'options': [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
             })
+        data.append({
+            'name': thing_type.name,
+            'attributes': attributes
+        })
 
     data = {
         'thing_types': data,
@@ -482,6 +483,18 @@ def move_thing(request, name):
     }
     return render(request, 'campaign/edit_page.html', build_context(context))
 
+
+def delete_thing(request, name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+    delete_thing_and_children(thing)
+    return HttpResponseRedirect(reverse('campaign:list_everything'))
+
+
+def delete_thing_and_children(thing):
+    for child in thing.children.all():
+        child.delete()
+    thing.delete()
 
 def new_thing(request, thing_type):
     if thing_type == 'Location':

@@ -15,6 +15,7 @@ urlpatterns = [
     path('export_settings', views.export_settings, name='export_settings'),
     path('list/<thing_type>', views.list_all, name='list'),
     path('new/<thing_type>', views.new_thing, name='new_thing'),
+    path('delete/<name>', views.delete_thing, name='delete_thing'),
     path('add_link/<name>', views.add_link, name='add_link'),
     path('edit_encounters/<name>/<type_name>', views.edit_random_encounters, name='edit_encounters'),
     path('edit_description/<name>', views.edit_description, name='edit_description'),

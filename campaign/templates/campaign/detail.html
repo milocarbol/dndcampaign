@@ -121,6 +121,8 @@
                             <a class="dropdown-item" href="{% url 'campaign:add_random' thing.name randomizer.attribute randomizer.category %}">Generate {{ randomizer.category }}s</a>
                         {% endfor %}
                     {% endif %}
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{% url 'campaign:delete_thing' thing.name %}">Delete</a>
                 </div>
             </div>
         </div>
