@@ -1012,7 +1012,8 @@ def manage_randomizer_options(request, thing_type, attribute):
             form = SelectCategoryForAttributeForm()
             form.refresh_fields(thing_type, attribute)
         else:
-            form = EditOptionalTextFieldForm({'value': '\n'.join([c.name for c in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')])})
+            print(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name'))
+            form = EditOptionalTextFieldForm({'value': '\n'.join([c.name for c in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).order_by('name')])})
 
     context = {
         'form': form,
