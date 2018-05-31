@@ -360,7 +360,7 @@ def save_campaign(campaign, json_file):
 
 
 def export_settings(request):
-    data = []
+    thing_data = []
     for thing_type in ThingType.objects.all():
         attributes = []
         for attribute in RandomizerAttribute.objects.filter(thing_type=thing_type).order_by('name'):
@@ -369,7 +369,7 @@ def export_settings(request):
                 category_options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=category).order_by('name')]
                 use_values_from = []
                 for category_for_values in category.use_values_from.all():
-                    use_values_from.append('{0}.{1}.{2}'.format(thing_type.name, category_for_values.attribute.name, category_for_values.name))
+                    use_values_from.append(category_for_values.name)
                 categories.append({
                     'name': category.name,
                     'show': category.show,
@@ -380,19 +380,58 @@ def export_settings(request):
                     'use_values_from': use_values_from,
                     'options': category_options
                 })
-            attributes.append({
+            attribute_data = {
                 'name': attribute.name,
                 'concatenate_results': attribute.concatenate_results,
+                'can_randomize_later': category.can_randomize_later,
+                'must_be_unique': category.must_be_unique,
                 'categories': categories,
                 'options': [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
-            })
-        data.append({
+            }
+            if attribute.category_parameter:
+                attribute_data['category_parameter'] = attribute.category_parameter.name
+            else:
+                attribute_data['category_parameter'] = None
+            attributes.append(attribute_data)
+        thing_data.append({
             'name': thing_type.name,
             'attributes': attributes
         })
 
+    generator_data = []
+    for generator_object in GeneratorObject.objects.all():
+        contains = []
+        for object_contains in GeneratorObjectContains.objects.filter(generator_object=generator_object):
+            contains.append({
+                'name': object_contains.contained_object.name,
+                'min_objects': object_contains.min_objects,
+                'max_objects': object_contains.max_objects
+            })
+        mappings = []
+        for mapping in GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=generator_object):
+            mapping_data = {
+                'field_name': mapping.field_name,
+                'randomizer_attribute': None,
+                'randomizer_attribute_category': None
+            }
+            if mapping.randomizer_attribute:
+                mapping_data['randomizer_attribute'] = mapping.randomizer_attribute.name
+            if mapping.randomizer_attribute_category:
+                mapping_data['randomizer_attribute_category'] = '{0}.{1}'.format(mapping.randomizer_attribute_category.attribute.name, mapping.randomizer_attribute_category.name)
+            mappings.append(mapping_data)
+        generator_object_data = {
+            'name': generator_object.name,
+            'thing_type': generator_object.thing_type.name,
+            'generator_object_contains': contains,
+            'attribute_for_container': generator_object.attribute_for_container,
+            'generator_object_field_to_randomizers': mappings
+        }
+        if generator_object.inherit_settings_from:
+            generator_object_data['inherit_settings_from'] = generator_object.inherit_settings_from.name
+        generator_data.append(generator_object_data)
     data = {
-        'thing_types': data,
+        'thing_types': thing_data,
+        'generators': generator_data
     }
 
     response = JsonResponse(data)
@@ -427,28 +466,42 @@ def save_settings(json_file):
             RandomizerAttribute.objects.filter(thing_type=thing_type, name=attribute['name']).delete()
             randomizer_attribute = RandomizerAttribute(thing_type=thing_type,
                                                        name=attribute['name'],
-                                                       concatenate_results=attribute['concatenate_results'])
+                                                       concatenate_results=attribute['concatenate_results'],
+                                                       can_randomize_later=attribute['can_randomize_later'],
+                                                       must_be_unique=attribute['must_be_unique'])
             randomizer_attribute.save()
 
-            if 'options' in attribute:
-                for attribute_option in attribute['options']:
-                    randomizer_attribute_option = RandomizerAttributeOption(attribute=randomizer_attribute,
-                                                                            name=attribute_option)
-                    randomizer_attribute_option.save()
+            for attribute_option in attribute['options']:
+                randomizer_attribute_option = RandomizerAttributeOption(attribute=randomizer_attribute,
+                                                                        name=attribute_option)
+                randomizer_attribute_option.save()
 
-            if 'categories' in attribute:
-                for attribute_category in attribute['categories']:
-                    randomizer_attribute_category = RandomizerAttributeCategory(attribute=randomizer_attribute,
-                                                                                name=attribute_category['name'],
-                                                                                show=attribute_category['show'],
-                                                                                can_combine_with_self=attribute_category['can_combine_with_self'],
-                                                                                max_options_to_use=attribute_category['max_options'])
-                    randomizer_attribute_category.save()
+            for attribute_category in attribute['categories']:
+                randomizer_attribute_category = RandomizerAttributeCategory(attribute=randomizer_attribute,
+                                                                            name=attribute_category['name'],
+                                                                            show=attribute_category['show'],
+                                                                            can_combine_with_self=attribute_category['can_combine_with_self'],
+                                                                            max_options_to_use=attribute_category['max_options_to_use'],
+                                                                            must_be_unique=attribute['must_be_unique'])
+                randomizer_attribute_category.save()
 
-                    for category_option in attribute_category['options']:
-                        randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
-                                                                                                 name=category_option)
-                        randomizer_attribute_category_option.save()
+                for category_option in attribute_category['options']:
+                    randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
+                                                                                             name=category_option)
+                    randomizer_attribute_category_option.save()
+
+        for attribute in thing_type_data['attributes']:
+            randomizer_attribute = RandomizerAttribute.objects.get(thing_type=thing_type, name=attribute['name'])
+            if attribute['category_parameter']:
+                randomizer_attribute.category_parameter = RandomizerAttribute.objects.get(thing_type=thing_type, name=attribute['category_parameter'])
+                randomizer_attribute.save()
+            for category in attribute['categories']:
+                randomizer_attribute_category = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute, name=category['name'])
+                if category['use_values_from']:
+                    for value in category['use_values_from']:
+                        value_attribute = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute, name=value)
+                        randomizer_attribute_category.use_values_from.add(value_attribute)
+                        randomizer_attribute_category.save()
     return HttpResponseRedirect(reverse('campaign:list_everything'))
 
 def move_thing(request, name):
