@@ -48,6 +48,11 @@
                                     <a class="dropdown-item" href="{% url 'campaign:change_campaign' campaign %}">{{ campaign }}</a>
                                 {% endfor %}
                                 <div class="dropdown-divider"></div>
+                                {% for attribute_preset in attribute_presets %}
+                                    <a class="dropdown-item" href="{% url 'campaign:select_preset' attribute_preset %}">Manage {{ attribute_preset }} presets</a>
+                                {% endfor %}
+                                <a class="dropdown-item" href="{% url 'campaign:add_preset' %}">Add preset</a>
+                                <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="{% url 'campaign:import' %}">Import Campaign</a>
                                 <a class="dropdown-item" href="{% url 'campaign:export' %}">Export Campaign</a>
                             </div>

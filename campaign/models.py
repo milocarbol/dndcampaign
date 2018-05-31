@@ -92,7 +92,7 @@ class RandomizerAttribute(models.Model):
     must_be_unique = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = (('name', 'thing_type'))
+        unique_together = (('name', 'thing_type'),)
 
     def __str__(self):
         return '[{0}] {1}'.format(self.thing_type.name, self.name)
@@ -101,10 +101,9 @@ class RandomizerAttribute(models.Model):
 class RandomizerAttributeOption(models.Model):
     name = models.CharField(max_length=50)
     attribute = models.ForeignKey(RandomizerAttribute, on_delete=models.CASCADE)
-    weight = models.IntegerField(default=0)
 
     class Meta:
-        unique_together = (('name', 'attribute'))
+        unique_together = (('name', 'attribute'),)
 
     def __str__(self):
         return '[{0}] {1}'.format(self.attribute.name, self.name)
@@ -122,7 +121,7 @@ class RandomizerAttributeCategory(models.Model):
     use_values_from = models.ManyToManyField('self', blank=True, symmetrical=False)
 
     class Meta:
-        unique_together = (('name', 'attribute'))
+        unique_together = (('name', 'attribute'),)
 
     def __str__(self):
         return '[{0}] {1}'.format(self.attribute.name, self.name)
@@ -133,10 +132,35 @@ class RandomizerAttributeCategoryOption(models.Model):
     category = models.ForeignKey(RandomizerAttributeCategory, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = (('name', 'category'))
+        unique_together = (('name', 'category'),)
 
     def __str__(self):
         return '[{0}] {1}: {2}'.format(self.category.attribute.name, self.category.name, self.name)
+
+
+class WeightPreset(models.Model):
+    name = models.CharField(max_length=50)
+    attribute_name = models.CharField(max_length=50, null=True, blank=True)
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = (('name', 'attribute_name', 'campaign'),)
+
+    def __str__(self):
+        return '[{0}] {1}'.format(self.campaign.name, self.name)
+
+
+class Weight(models.Model):
+    name_to_weight = models.CharField(max_length=50)
+    weight = models.IntegerField(default=0)
+    weight_preset = models.ForeignKey(WeightPreset, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = (('name_to_weight', 'weight_preset'),)
+
+    def __str__(self):
+        return '[{0}] {1}: {2}'.format(self.weight_preset.name, self.name_to_weight, self.weight)
 
 
 class RandomAttribute(models.Model):

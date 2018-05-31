@@ -1,7 +1,7 @@
 from django import forms
 from django.shortcuts import get_object_or_404
 
-from .models import Thing, Attribute, AttributeValue, Campaign, RandomizerAttribute, RandomizerAttributeCategory, GeneratorObject
+from .models import Thing, Attribute, AttributeValue, Campaign, RandomizerAttribute, RandomizerAttributeCategory, GeneratorObject, WeightPreset
 
 
 ATTITUDE_CHOICES = [
@@ -158,3 +158,23 @@ class SelectGeneratorObject(forms.Form):
 
     def refresh_fields(self, thing_type):
         self.fields['generator_object'].queryset = GeneratorObject.objects.filter(thing_type=thing_type)
+
+
+class NewPreset(forms.Form):
+    name = forms.CharField(label='Name')
+    attribute_name = forms.ChoiceField(label='Attribute', choices=[])
+
+    def refresh_fields(self):
+        attributes = []
+        for attribute in RandomizerAttribute.objects.all():
+            if not RandomizerAttributeCategory.objects.filter(attribute=attribute):
+                attributes.append((attribute.name, '[{0}] {1}'.format(attribute.thing_type.name, attribute.name)))
+        self.fields['attribute_name'].choices = attributes
+
+
+class SelectPreset(forms.Form):
+    preset = forms.ChoiceField(label='Preset', choices=[])
+
+    def refresh_fields(self, attribute_name, campaign):
+        choices = [(p.name, p.name) for p in WeightPreset.objects.filter(attribute_name__iexact=attribute_name, campaign=campaign)]
+        self.fields['preset'].choices = choices

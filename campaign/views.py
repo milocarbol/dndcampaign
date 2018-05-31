@@ -7,22 +7,28 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.urls import reverse
 from operator import methodcaller
 
-from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset
 
 
 def build_context(context):
+    campaign = Campaign.objects.get(is_active=True)
     attribute_settings = []
     for thing_type in ThingType.objects.all().order_by('name'):
         attribute_settings.append({
             'name': thing_type.name,
             'attributes': [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing_type)]
         })
+    attribute_presets = []
+    for preset in WeightPreset.objects.filter(campaign=campaign):
+        attribute_presets.append(preset.attribute_name)
+    attribute_presets = sorted(list(set(attribute_presets)))
     full_context = {
         'search_form': SearchForm(),
-        'campaign': Campaign.objects.get(is_active=True).name,
+        'campaign': campaign.name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
-        'attribute_settings': attribute_settings
+        'attribute_settings': attribute_settings,
+        'attribute_presets': attribute_presets
     }
     full_context.update(context)
     return full_context
@@ -392,7 +398,7 @@ def export_settings(request):
                 'can_randomize_later': attribute.can_randomize_later,
                 'must_be_unique': attribute.must_be_unique,
                 'categories': categories,
-                'options': [{'name': o.name, 'weight': o.weight} for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
+                'options': [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
             }
             if attribute.category_parameter:
                 attribute_data['category_parameter'] = attribute.category_parameter.name
@@ -481,8 +487,7 @@ def save_settings(json_file):
 
             for attribute_option in attribute['options']:
                 randomizer_attribute_option = RandomizerAttributeOption(attribute=randomizer_attribute,
-                                                                        name=attribute_option['name'],
-                                                                        weight=attribute_option['weight'])
+                                                                        name=attribute_option['name'])
                 randomizer_attribute_option.save()
 
             for attribute_category in attribute['categories']:
@@ -972,6 +977,7 @@ def get_random_attribute(request, thing_type, attribute):
 
 
 def get_random_attribute_raw(thing_type, attribute):
+    campaign = get_object_or_404(Campaign, is_active=True)
     try:
         randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name__iexact=thing_type, name__iexact=attribute)
     except RandomizerAttribute.DoesNotExist:
@@ -993,10 +999,21 @@ def get_random_attribute_raw(thing_type, attribute):
         else:
             return None
     else:
-        options = []
-        for option in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute):
-            for i in range(0, option.weight):
-                options.append(option.name)
+        try:
+            weight_preset = WeightPreset.objects.get(campaign=campaign, attribute_name__iexact=attribute, is_active=True)
+        except WeightPreset.DoesNotExist:
+            weight_preset = None
+        if weight_preset:
+            options = []
+            for option in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute):
+                try:
+                    weight = Weight.objects.get(weight_preset=weight_preset, name_to_weight__iexact=option.name).weight
+                except Weight.DoesNotExist:
+                    weight = 0
+                for i in range(0, weight):
+                    options.append(option.name)
+        else:
+            options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute)]
         if options:
             return random.choice(options)
         else:
@@ -1111,29 +1128,15 @@ def manage_randomizer_options(request, thing_type, attribute):
                 RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).delete()
                 for option in set([o.strip() for o in form.cleaned_data['value'].split('\n')]):
                     if option:
-                        parts = option.split('*')
-                        if len(parts) == 1:
-                            randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=parts[0])
-                            randomizer_option.save()
-                        else:
-                            try:
-                                weight = int(parts[1])
-                            except ValueError:
-                                weight = 0
-                            randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=parts[0], weight=weight)
-                            randomizer_option.save()
+                        randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=option)
+                        randomizer_option.save()
                 return HttpResponseRedirect(reverse('campaign:list_everything'))
     else:
         if len(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)) > 0:
             form = SelectCategoryForAttributeForm()
             form.refresh_fields(thing_type, attribute)
         else:
-            options = []
-            for option in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).order_by('name'):
-                if option.weight == 0:
-                    options.append(option.name)
-                else:
-                    options.append('{0}*{1}'.format(option.name, option.weight))
+            options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).order_by('name')]
             form = EditOptionalTextFieldForm({'value': '\n'.join(options)})
 
     context = {
@@ -1245,6 +1248,72 @@ def delete_random_attribute_for_thing(request, name, random_attribute_id):
         print('Tried to delete a nonexistant random attribute from {0}.'.format(thing.name))
 
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+
+
+def add_preset(request):
+    campaign = get_object_or_404(Campaign, is_active=True)
+    if request.method == 'POST':
+        form = NewPreset(request.POST)
+        form.refresh_fields()
+        if form.is_valid():
+            preset = WeightPreset(campaign=campaign, name=form.cleaned_data['name'], attribute_name=form.cleaned_data['attribute_name'])
+            preset.save()
+            return HttpResponseRedirect(reverse('campaign:manage_preset', args=(form.cleaned_data['name'], form.cleaned_data['attribute_name'])))
+    else:
+        form = NewPreset()
+        form.refresh_fields()
+
+    context = {
+        'form': form,
+        'header': 'Create a new preset',
+        'url': reverse('campaign:add_preset')
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def select_preset(request, attribute_name):
+    campaign = get_object_or_404(Campaign, is_active=True)
+    if request.method == 'POST':
+        form = SelectPreset(request.POST)
+        form.refresh_fields(attribute_name, campaign)
+        if form.is_valid():
+            return HttpResponseRedirect(reverse('campaign:manage_preset', args=(form.cleaned_data['preset'], attribute_name)))
+    else:
+        form = SelectPreset()
+        form.refresh_fields(attribute_name, campaign)
+
+    context = {
+        'form': form,
+        'header': 'Select a {0} preset to edit'.format(attribute_name),
+        'url': reverse('campaign:select_preset', args=(attribute_name,))
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def manage_weights(request, preset_name, attribute_name):
+    campaign = get_object_or_404(Campaign, is_active=True)
+    weight_preset = get_object_or_404(WeightPreset, campaign=campaign, name=preset_name, attribute_name=attribute_name)
+
+    if request.method == 'POST':
+        form = EditOptionalTextFieldForm(request.POST)
+        if form.is_valid():
+            Weight.objects.filter(weight_preset=weight_preset).delete()
+            for weighted_name in form.cleaned_data['value'].split('\n'):
+                parts = weighted_name.split('*')
+                if len(parts) == 2:
+                    weight = Weight(weight_preset=weight_preset, name_to_weight=parts[0].strip(), weight=int(parts[1]))
+                    weight.save()
+            return HttpResponseRedirect(reverse('campaign:list_everything'))
+    else:
+        existing_weights = ['{0}*{1}'.format(w.name_to_weight, w.weight) for w in Weight.objects.filter(weight_preset=weight_preset)]
+        form = EditOptionalTextFieldForm({'value': '\n'.join(existing_weights)})
+
+    context = {
+        'form': form,
+        'header': 'Manage {0} preset for {1}'.format(attribute_name, preset_name),
+        'url': reverse('campaign:manage_preset', args=(preset_name, attribute_name))
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
 
 
 def select_object_to_generate(request, thing_type):
