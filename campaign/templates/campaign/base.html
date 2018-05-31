@@ -57,17 +57,12 @@
                                 Settings
                             </a>
                             <div class="dropdown-menu" aria-labelledby="settingsDropdown">
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'Faction' 'name' %}">Faction Names</a>
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'Faction' 'power' %}">Faction Power</a>
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'Faction' 'reach' %}">Faction Reach</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'Location' 'name' %}">Location Names</a>
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'Location' 'description' %}">Location Descriptions</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'NPC' 'name' %}">NPC Names</a>
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'NPC' 'occupation' %}">NPC Occupations</a>
-                                <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' 'NPC' 'description' %}">NPC Descriptions</a>
-                                <div class="dropdown-divider"></div>
+                                {% for thing_type in attribute_settings %}
+                                    {% for attribute in thing_type.attributes %}
+                                        <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' thing_type.name attribute %}">{{ thing_type.name }} {{ attribute }}s</a>
+                                    {% endfor %}
+                                    <div class="dropdown-divider"></div>
+                                {% endfor %}
                                 <a class="dropdown-item" href="{% url 'campaign:import_settings' %}">Import Settings</a>
                                 <a class="dropdown-item" href="{% url 'campaign:export_settings' %}">Export Settings</a>
                             </div>

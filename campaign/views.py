@@ -12,10 +12,17 @@ from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, New
 
 
 def build_context(context):
+    attribute_settings = []
+    for thing_type in ThingType.objects.all().order_by('name'):
+        attribute_settings.append({
+            'name': thing_type.name,
+            'attributes': [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing_type)]
+        })
     full_context = {
         'search_form': SearchForm(),
         'campaign': Campaign.objects.get(is_active=True).name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
+        'attribute_settings': attribute_settings
     }
     full_context.update(context)
     return full_context
@@ -1113,7 +1120,7 @@ def manage_randomizer_options(request, thing_type, attribute):
 
     context = {
         'form': form,
-        'header': 'Edit options for {0} randomizer'.format(attribute),
+        'header': 'Edit options for {0} {1}'.format(thing_type.lower(), attribute.lower()),
         'url': reverse('campaign:manage_randomizer_options', args=(thing_type, attribute))
     }
     return render(request, 'campaign/edit_page.html', build_context(context))
