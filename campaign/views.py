@@ -428,6 +428,8 @@ def export_settings(request):
         }
         if generator_object.inherit_settings_from:
             generator_object_data['inherit_settings_from'] = generator_object.inherit_settings_from.name
+        else:
+            generator_object_data['inherit_settings_from'] = None
         generator_data.append(generator_object_data)
     data = {
         'thing_types': thing_data,
@@ -502,6 +504,47 @@ def save_settings(json_file):
                         value_attribute = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute, name=value)
                         randomizer_attribute_category.use_values_from.add(value_attribute)
                         randomizer_attribute_category.save()
+
+    GeneratorObject.objects.all().delete()
+    for generator_data in data['generators']:
+        thing_type = ThingType.objects.get(name=generator_data['thing_type'])
+        generator_object = GeneratorObject(name=generator_data['name'],
+                                           thing_type=thing_type,
+                                           attribute_for_container=generator_data['attribute_for_container'])
+        generator_object.save()
+
+        for mapping in generator_data['generator_object_field_to_randomizers']:
+            randomizer_attribute = None
+            randomizer_attribute_category = None
+
+            if mapping['randomizer_attribute']:
+                randomizer_attribute = RandomizerAttribute.objects.get(thing_type=thing_type, name=mapping['randomizer_attribute'])
+            if mapping['randomizer_attribute_category']:
+                parts = mapping['randomizer_attribute_category'].split('.')
+                attribute = RandomizerAttribute.objects.get(thing_type=thing_type, name=parts[0])
+                randomizer_attribute_category = RandomizerAttributeCategory.objects.get(attribute=attribute, name=parts[1])
+
+            generator_object_field_to_randomizer_attribute = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
+                                                                                                       field_name=mapping['field_name'],
+                                                                                                       randomizer_attribute=randomizer_attribute,
+                                                                                                       randomizer_attribute_category=randomizer_attribute_category)
+            generator_object_field_to_randomizer_attribute.save()
+
+    for generator_data in data['generators']:
+        thing_type = ThingType.objects.get(name=generator_data['thing_type'])
+        generator_object = GeneratorObject.objects.get(thing_type=thing_type, name=generator_data['name'])
+
+        if 'inherit_settings_from' in generator_data:
+            generator_object.inherit_settings_from = GeneratorObject.objects.get(thing_type=thing_type, name=generator_data['inherit_settings_from'])
+            generator_object.save()
+        for contains in generator_data['generator_object_contains']:
+            contained_object = GeneratorObject.objects.get(name=contains['name'])
+            contains_entry = GeneratorObjectContains(generator_object=generator_object,
+                                                     contained_object=contained_object,
+                                                     min_objects=contains['min_objects'],
+                                                     max_objects=contains['max_objects'])
+            contains_entry.save()
+
     return HttpResponseRedirect(reverse('campaign:list_everything'))
 
 def move_thing(request, name):
@@ -1328,7 +1371,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
             print('Adding {0} to {1}...'.format(child_object.name, thing.name))
             thing.children.add(child_object)
             thing.save()
-            attribute_for_container = ''
+            attribute_for_container = child.contained_object.attribute_for_container
             inherit_settings_from = child.contained_object.inherit_settings_from
             while not attribute_for_container and inherit_settings_from:
                 attribute_for_container = inherit_settings_from.attribute_for_container

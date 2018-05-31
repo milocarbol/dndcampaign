@@ -147,7 +147,7 @@ class RandomAttribute(models.Model):
 
 
 class GeneratorObject(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE)
     inherit_settings_from = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
     attribute_for_container = models.CharField(max_length=50, null=True, blank=True)
