@@ -392,7 +392,7 @@ def export_settings(request):
                 'can_randomize_later': attribute.can_randomize_later,
                 'must_be_unique': attribute.must_be_unique,
                 'categories': categories,
-                'options': [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
+                'options': [{'name': o.name, 'weight': o.weight} for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
             }
             if attribute.category_parameter:
                 attribute_data['category_parameter'] = attribute.category_parameter.name
@@ -481,7 +481,8 @@ def save_settings(json_file):
 
             for attribute_option in attribute['options']:
                 randomizer_attribute_option = RandomizerAttributeOption(attribute=randomizer_attribute,
-                                                                        name=attribute_option)
+                                                                        name=attribute_option['name'],
+                                                                        weight=attribute_option['weight'])
                 randomizer_attribute_option.save()
 
             for attribute_category in attribute['categories']:
@@ -992,7 +993,10 @@ def get_random_attribute_raw(thing_type, attribute):
         else:
             return None
     else:
-        options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute)]
+        options = []
+        for option in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute):
+            for i in range(0, option.weight):
+                options.append(option.name)
         if options:
             return random.choice(options)
         else:
@@ -1107,16 +1111,30 @@ def manage_randomizer_options(request, thing_type, attribute):
                 RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).delete()
                 for option in set([o.strip() for o in form.cleaned_data['value'].split('\n')]):
                     if option:
-                        randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=option)
-                        randomizer_option.save()
+                        parts = option.split('*')
+                        if len(parts) == 1:
+                            randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=parts[0])
+                            randomizer_option.save()
+                        else:
+                            try:
+                                weight = int(parts[1])
+                            except ValueError:
+                                weight = 0
+                            randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=parts[0], weight=weight)
+                            randomizer_option.save()
                 return HttpResponseRedirect(reverse('campaign:list_everything'))
     else:
         if len(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)) > 0:
             form = SelectCategoryForAttributeForm()
             form.refresh_fields(thing_type, attribute)
         else:
-            print(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name'))
-            form = EditOptionalTextFieldForm({'value': '\n'.join([c.name for c in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).order_by('name')])})
+            options = []
+            for option in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute).order_by('name'):
+                if option.weight == 0:
+                    options.append(option.name)
+                else:
+                    options.append('{0}*{1}'.format(option.name, option.weight))
+            form = EditOptionalTextFieldForm({'value': '\n'.join(options)})
 
     context = {
         'form': form,

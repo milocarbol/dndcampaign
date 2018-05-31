@@ -101,12 +101,14 @@ class RandomizerAttribute(models.Model):
 class RandomizerAttributeOption(models.Model):
     name = models.CharField(max_length=50)
     attribute = models.ForeignKey(RandomizerAttribute, on_delete=models.CASCADE)
+    weight = models.IntegerField(default=0)
 
     class Meta:
         unique_together = (('name', 'attribute'))
 
     def __str__(self):
         return '[{0}] {1}'.format(self.attribute.name, self.name)
+
 
 
 class RandomizerAttributeCategory(models.Model):
