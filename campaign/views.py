@@ -929,14 +929,14 @@ def set_attribute(request, name, attribute_name):
     thing = get_object_or_404(Thing, campaign=campaign, name=name)
     attribute = get_object_or_404(Attribute, thing_type=thing.thing_type, name=attribute_name)
     if request.method == 'POST':
-        if attribute.name == 'Attitude' or attribute.name == 'Leader' or attribute.name == 'Power' or attribute.name == 'Reach':
+        if attribute.name == 'Attitude' or attribute.name == 'Leader' or attribute.name == 'Power' \
+                or attribute.name == 'Reach' or attribute.name == 'Ruler':
             form = ChangeOptionAttributeForm(request.POST)
             form.refresh_fields(attribute.thing_type, attribute.name)
             if form.is_valid():
-                attribute_value = AttributeValue.objects.filter(attribute=attribute, thing=thing)
-                if attribute_value:
-                    attribute_value = attribute_value[0]
-                else:
+                try:
+                    attribute_value = AttributeValue.objects.get(attribute=attribute, thing=thing)
+                except AttributeValue.DoesNotExist:
                     attribute_value = AttributeValue(attribute=attribute, thing=thing)
                 attribute_value.value = form.cleaned_data['value']
                 attribute_value.save()
@@ -944,13 +944,18 @@ def set_attribute(request, name, attribute_name):
         else:
             form = ChangeTextAttributeForm(request.POST)
             if form.is_valid():
-                attribute_value = AttributeValue.objects.filter(attribute=attribute, thing=thing)
-                if attribute_value:
-                    attribute_value = attribute_value[0]
-                else:
-                    attribute_value = AttributeValue(attribute=attribute, thing=thing)
-                attribute_value.value = form.cleaned_data['value']
-                attribute_value.save()
+                try:
+                    attribute_value = AttributeValue.objects.get(attribute=attribute, thing=thing)
+                    if form.cleaned_data['value']:
+                        attribute_value.value = form.cleaned_data['value']
+                        attribute_value.save()
+                    else:
+                        attribute_value.delete()
+                except AttributeValue.DoesNotExist:
+                    if form.cleaned_data['value']:
+                        attribute_value = AttributeValue(attribute=attribute, thing=thing)
+                        attribute_value.value = form.cleaned_data['value']
+                        attribute_value.save()
                 return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
         attribute_value = AttributeValue.objects.filter(attribute=attribute, thing=thing)
@@ -958,7 +963,8 @@ def set_attribute(request, name, attribute_name):
             attribute_value = attribute_value[0]
         else:
             attribute_value = AttributeValue(attribute=attribute, thing=thing, value='')
-        if attribute.name == 'Attitude' or attribute.name == 'Leader' or attribute.name == 'Power' or attribute.name == 'Reach':
+        if attribute.name == 'Attitude' or attribute.name == 'Leader' or attribute.name == 'Power' \
+                or attribute.name == 'Reach' or attribute.name == 'Ruler':
             form = ChangeOptionAttributeForm({'name': attribute.name, 'value': attribute_value.value})
             form.refresh_fields(attribute.thing_type, attribute.name)
         else:

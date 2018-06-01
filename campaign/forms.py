@@ -18,6 +18,7 @@ MAGNITUDE_CHOICES = [
 ]
 
 POPULATION_CHOICES = [
+    ('', 'None'),
     ('100', 'Hamlet'),
     ('1000', 'Village'),
     ('10000', 'Town'),
@@ -46,7 +47,7 @@ class NewLocationForm(forms.Form):
     factions = forms.ModelMultipleChoiceField(label='Factions', queryset=Thing.objects.all(), required=False)
     npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
     ruler = forms.ModelChoiceField(label='Ruler', queryset=Thing.objects.all(), required=False)
-    population = forms.ChoiceField(label='Population', choices=POPULATION_CHOICES)
+    population = forms.ChoiceField(label='Population', choices=POPULATION_CHOICES, required=False)
     generate_rumours = forms.BooleanField(label='Generate rumours', required=False)
 
     def refresh_fields(self):
@@ -108,7 +109,7 @@ class EditDescriptionForm(forms.Form):
 
 
 class ChangeTextAttributeForm(forms.Form):
-    value = forms.CharField(label='Value')
+    value = forms.CharField(label='Value', required=False)
 
 
 class ChangeOptionAttributeForm(forms.Form):
@@ -118,7 +119,7 @@ class ChangeOptionAttributeForm(forms.Form):
         attribute = get_object_or_404(Attribute, thing_type=thing_type, name=name)
         if attribute.name == 'Attitude':
             self.fields['value'].choices = ATTITUDE_CHOICES
-        elif attribute.name == 'Leader':
+        elif attribute.name == 'Leader' or attribute.name == 'Ruler':
             choices = []
             for npc in Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='NPC').order_by('name'):
                 choices.append((npc.name, npc.name),)
