@@ -170,7 +170,7 @@ def detail(request, name):
             'list': random_encounters
         })
 
-    editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type).order_by('name')]
+    editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type, display_in_summary=True).order_by('name')]
 
     randomizable_attributes = []
     random_attributes = [{'text': r.text, 'id': r.pk} for r in RandomAttribute.objects.filter(thing=thing).order_by('text')]
