@@ -91,6 +91,7 @@ class RandomizerAttribute(models.Model):
     concatenate_results = models.BooleanField(default=False)
     can_randomize_later = models.BooleanField(default=False)
     must_be_unique = models.BooleanField(default=True)
+    max_options_to_use = models.IntegerField(default=1)
 
     class Meta:
         unique_together = (('name', 'thing_type'),)

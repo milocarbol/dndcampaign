@@ -120,7 +120,7 @@
                     {% if thing.randomizable_attributes %}
                         <div class="dropdown-divider"></div>
                         {% for randomizer in thing.randomizable_attributes %}
-                            <a class="dropdown-item" href="{% url 'campaign:add_random' thing.name randomizer.attribute randomizer.category %}">Generate {{ randomizer.category }}s</a>
+                            <a class="dropdown-item" href="{% url 'campaign:add_random' thing.name randomizer %}">Generate {{ randomizer }}s</a>
                         {% endfor %}
                     {% endif %}
                     <div class="dropdown-divider"></div>

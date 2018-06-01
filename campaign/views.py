@@ -172,15 +172,8 @@ def detail(request, name):
 
     editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type, display_in_summary=True).order_by('name')]
 
-    randomizable_attributes = []
     random_attributes = [{'text': r.text, 'id': r.pk} for r in RandomAttribute.objects.filter(thing=thing).order_by('text')]
-    for a in RandomizerAttribute.objects.filter(thing_type=thing.thing_type).order_by('name'):
-        categories = RandomizerAttributeCategory.objects.filter(attribute=a, can_randomize_later=True).order_by('name')
-        for category in categories:
-            randomizable_attributes.append({
-                'attribute': a.name,
-                'category': category.name
-            })
+    randomizable_attributes = [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing.thing_type, can_randomize_later=True).order_by('name')]
 
     thing_info = {
         'name': thing.name,
@@ -1204,19 +1197,18 @@ def manage_randomizer_options_for_category(request, thing_type, attribute, categ
     return render(request, 'campaign/edit_page.html', build_context(context))
 
 
-def generate_random_attributes_for_thing(request, name, attribute, attribute_category):
+def generate_random_attributes_for_thing(request, name, attribute):
     campaign = get_object_or_404(Campaign, is_active=True)
     thing = get_object_or_404(Thing, campaign=campaign, name__iexact=name)
     randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name__iexact=attribute)
-    attribute_category = get_object_or_404(RandomizerAttributeCategory, attribute=randomizer_attribute, name__iexact=attribute_category)
 
-    generate_random_attributes_for_thing_raw(thing, attribute_category)
+    generate_random_attributes_for_thing_raw(thing, randomizer_attribute)
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
 
-def generate_random_attributes_for_thing_raw(thing, attribute_category):
-    for i in range(0, random.randint(1, attribute_category.max_options_to_use)):
-        option = get_random_attribute_in_category_raw(thing.thing_type, attribute_category.attribute.name, attribute_category.name)
+def generate_random_attributes_for_thing_raw(thing, attribute):
+    for i in range(0, random.randint(1, attribute.max_options_to_use)):
+        option = get_random_attribute_raw(thing.thing_type, attribute.name)
         if option:
             random_attribute = RandomAttribute(thing=thing, text=option)
             random_attribute.save()
@@ -1429,22 +1421,22 @@ def generate_thing(generator_object, campaign, parent_object=None):
                 'value': value
             })
         elif field_mapping.randomizer_attribute:
-            attribute = Attribute.objects.get(thing_type=generator_object.thing_type, name=field_mapping.randomizer_attribute.name)
-            if value:
-                fields_to_save['attribute_values'].append({
-                    'attribute': attribute,
-                    'value': value
-                })
-        elif field_mapping.randomizer_attribute_category:
-            if field_mapping.randomizer_attribute_category.can_randomize_later:
-                fields_to_save['random_attributes'].append(field_mapping.randomizer_attribute_category)
+            if field_mapping.randomizer_attribute.can_randomize_later:
+                fields_to_save['random_attributes'].append(field_mapping.randomizer_attribute)
             else:
-                attribute = Attribute.objects.get(thing_type=generator_object.thing_type, name=field_mapping.randomizer_attribute_category.attribute.name)
+                attribute = Attribute.objects.get(thing_type=generator_object.thing_type, name=field_mapping.randomizer_attribute.name)
                 if value:
                     fields_to_save['attribute_values'].append({
                         'attribute': attribute,
                         'value': value
                     })
+        elif field_mapping.randomizer_attribute_category:
+            attribute = Attribute.objects.get(thing_type=generator_object.thing_type, name=field_mapping.randomizer_attribute_category.attribute.name)
+            if value:
+                fields_to_save['attribute_values'].append({
+                    'attribute': attribute,
+                    'value': value
+                })
 
     for field in fields_to_save['thing']:
         var_search = re.search(r'\$\{(.+)\}', field['value'])
@@ -1483,7 +1475,8 @@ def generate_thing(generator_object, campaign, parent_object=None):
         attribute_value.save()
 
     for attribute in fields_to_save['random_attributes']:
-        generate_random_attributes_for_thing_raw(thing, attribute)
+        randomizer_attribute = RandomizerAttribute.objects.get(thing_type=thing.thing_type, name__iexact=attribute.name)
+        generate_random_attributes_for_thing_raw(thing, randomizer_attribute)
 
     children = GeneratorObjectContains.objects.filter(generator_object=generator_object)
     for child in children:
