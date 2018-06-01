@@ -317,7 +317,8 @@ def export(request):
             'attribute_values': attributes,
             'links': links,
             'random_encounters': random_encounters,
-            'random_attributes': [a.text for a in RandomAttribute.objects.filter(thing=thing)]
+            'random_attributes': [a.text for a in RandomAttribute.objects.filter(thing=thing)],
+            'is_bookmarked': thing.is_bookmarked
         })
 
     data = {
@@ -353,7 +354,9 @@ def save_campaign(campaign, json_file):
     Thing.objects.filter(campaign=campaign).delete()
     data = json.loads(json_file)
     for thing in data['things']:
-        thing_object = Thing(campaign=campaign, name=thing['name'], description=thing['description'], thing_type=ThingType.objects.get(name=thing['thing_type']))
+        thing_object = Thing(campaign=campaign, name=thing['name'], description=thing['description'],
+                             thing_type=ThingType.objects.get(name=thing['thing_type']),
+                             is_bookmarked=thing['is_bookmarked'])
         thing_object.save()
 
         for attribute in thing['attribute_values']:
