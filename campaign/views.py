@@ -656,11 +656,10 @@ def create_new_location(request):
                 population.save()
 
             if form.cleaned_data['generate_rumours']:
-                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Description')
-                attribute_category = get_object_or_404(RandomizerAttributeCategory, attribute=randomizer_attribute, name='Rumour')
+                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Rumour')
 
-                for i in range(0, random.randint(1, attribute_category.max_options_to_use)):
-                    option = get_random_attribute_in_category_raw(thing.thing_type, randomizer_attribute.name, attribute_category.name)
+                for i in range(0, random.randint(1, randomizer_attribute.max_options_to_use)):
+                    option = get_random_attribute_raw(thing.thing_type, randomizer_attribute.name)
                     if option:
                         random_attribute = RandomAttribute(thing=thing, text=option)
                         random_attribute.save()
@@ -795,11 +794,10 @@ def create_new_npc(request):
                 link.save()
 
             if form.cleaned_data['generate_hooks']:
-                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Description')
-                attribute_category = get_object_or_404(RandomizerAttributeCategory, attribute=randomizer_attribute, name='Hook')
+                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Hook')
 
-                for i in range(0, random.randint(1, attribute_category.max_options_to_use)):
-                    option = get_random_attribute_in_category_raw(thing.thing_type, randomizer_attribute.name, attribute_category.name)
+                for i in range(0, random.randint(1, randomizer_attribute.max_options_to_use)):
+                    option = get_random_attribute_raw(thing.thing_type, randomizer_attribute.name)
                     if option:
                         random_attribute = RandomAttribute(thing=thing, text=option)
                         random_attribute.save()
