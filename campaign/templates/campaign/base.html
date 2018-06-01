@@ -10,35 +10,35 @@
     <body>
         <div class="container">
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-                <a class="navbar-brand" href="{% url 'campaign:list_everything' %}">{{ campaign }}</a>
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                <!--a class="navbar-brand" href="{% url 'campaign:list_everything' %}">{{ campaign }}</a-->
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav mr-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'campaign:list' 'Location' %}">Locations</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'campaign:list' 'Faction' %}">Factions</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'campaign:list' 'NPC' %}">NPCs</a>
-                        </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="manageDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                Create
+                            <a class="nav-link dropdown-toggle navbar-brand" href="#" id="bookmarkDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {{ campaign }}
                             </a>
-                            <div class="dropdown-menu" aria-labelledby="manageDropdown">
-                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'Faction' %}">New Faction</a>
-                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'Location' %}">New Location</a>
-                                <a class="dropdown-item" href="{% url 'campaign:new_thing' 'NPC' %}">New NPC</a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="{% url 'campaign:select_generator' 'Faction' %}">Random Faction</a>
-                                <a class="dropdown-item" href="{% url 'campaign:select_generator' 'Location' %}">Random Location</a>
-                                <a class="dropdown-item" href="{% url 'campaign:select_generator' 'NPC' %}">Random NPC</a>
+                            <div class="dropdown-menu" aria-labelledby="bookmarkDropdown">
+                                {% for thing_type in bookmarks %}
+                                    <h6 class="dropdown-header">{{ thing_type.name }}s</h6>
+                                    {% for thing in thing_type.things %}
+                                        <a class="dropdown-item" href="{% url 'campaign:detail' thing %}">{{ thing }}</a>
+                                    {% endfor %}
+                                {% endfor %}
                             </div>
                         </li>
+                        {% for thing_type in thing_types %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="{{ thing_type }}Dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    {{ thing_type }}s
+                                </a>
+                                <div class="dropdown-menu" aria-labelledby="{{ thing_type }}Dropdown">
+                                    <a class="dropdown-item" href="{% url 'campaign:list' thing_type %}">All {{ thing_type }}s</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="{% url 'campaign:new_thing' thing_type %}">New {{ thing_type }}</a>
+                                    <a class="dropdown-item" href="{% url 'campaign:select_generator' thing_type %}">Random {{ thing_type }}</a>
+                                </div>
+                            </li>
+                        {% endfor %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="campaignDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 Campaign
@@ -63,8 +63,9 @@
                             </a>
                             <div class="dropdown-menu" aria-labelledby="settingsDropdown">
                                 {% for thing_type in attribute_settings %}
+                                    <h6 class="dropdown-header">{{ thing_type.name }}s</h6>
                                     {% for attribute in thing_type.attributes %}
-                                        <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' thing_type.name attribute %}">{{ thing_type.name }} {{ attribute }}s</a>
+                                        <a class="dropdown-item" href="{% url 'campaign:manage_randomizer_options' thing_type.name attribute %}">{{ attribute }}s</a>
                                     {% endfor %}
                                     <div class="dropdown-divider"></div>
                                 {% endfor %}

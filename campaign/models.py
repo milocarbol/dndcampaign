@@ -19,7 +19,8 @@ class ThingType(models.Model):
 class Thing(models.Model):
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True)
     name = models.CharField(max_length=50)
-    description = models.TextField()
+    description = models.TextField(null=False, blank=True)
+    is_bookmarked = models.BooleanField(default=False)
     children = models.ManyToManyField('self', blank=True, symmetrical=False)
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE, null=True)
 

@@ -14,10 +14,15 @@ from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, New
 def build_context(context):
     campaign = Campaign.objects.get(is_active=True)
     attribute_settings = []
+    bookmarks = []
     for thing_type in ThingType.objects.all().order_by('name'):
         attribute_settings.append({
             'name': thing_type.name,
             'attributes': [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing_type)]
+        })
+        bookmarks.append({
+            'name': thing_type.name,
+            'things': [t.name for t in Thing.objects.filter(thing_type=thing_type, is_bookmarked=True).order_by('name')]
         })
     attribute_presets = []
     for preset in WeightPreset.objects.filter(campaign=campaign):
@@ -28,7 +33,9 @@ def build_context(context):
         'campaign': campaign.name,
         'campaigns': [c.name for c in Campaign.objects.all().order_by('name')],
         'attribute_settings': attribute_settings,
-        'attribute_presets': attribute_presets
+        'attribute_presets': attribute_presets,
+        'bookmarks': bookmarks,
+        'thing_types': [tt.name for tt in ThingType.objects.all().order_by('name')]
     }
     full_context.update(context)
     return full_context
@@ -185,7 +192,8 @@ def detail(request, name):
         'display_encounters': display_encounters,
         'enable_random_encounters': thing.thing_type.name == 'Location',
         'editable_attributes': editable_attributes,
-        'randomizable_attributes': randomizable_attributes
+        'randomizable_attributes': randomizable_attributes,
+        'is_bookmarked': thing.is_bookmarked
     }
 
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
@@ -964,6 +972,20 @@ def set_attribute(request, name, attribute_name):
         'form': form
     }
     return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def bookmark(request, name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+
+    if thing.is_bookmarked:
+        thing.is_bookmarked = False
+        thing.save()
+    else:
+        thing.is_bookmarked = True
+        thing.save()
+
+    return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
 
 def get_random_attribute(request, thing_type, attribute):
