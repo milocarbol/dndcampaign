@@ -1435,21 +1435,27 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     'attribute': attribute,
                     'value': value
                 })
-
+    
+    variable_regex = r'\$\{([^\}]+)\}'
     for field in fields_to_save['thing']:
-        var_search = re.search(r'\$\{(.+)\}', field['value'])
-        if var_search:
-            variable = var_search.group(1)
-            if '.' in variable:
-                parts = variable.split('.')
-                if parts[0] == 'parent':
-                    field['value'] = re.sub(r'\$\{.+\}', getattr(parent_object, parts[1]), field['value'])
-            else:
-                for thing_field in fields_to_save['thing']:
-                    if thing_field['name'] == variable:
-                        field['value'] = re.sub(r'\$\{.+\}', thing_field['value'], field['value'])
-                        break
-        setattr(thing, field['name'], field['value'])
+        if field['value']:
+            var_search = re.findall(variable_regex, field['value'])
+            if var_search:
+                for variable in var_search:
+                    if '.' in variable:
+                        parts = variable.split('.')
+                        if parts[0] == 'parent':
+                            field['value'] = re.sub(r'\$\{' + variable + '\}', getattr(parent_object, parts[1]), field['value'])
+                    else:
+                        for thing_field in fields_to_save['thing']:
+                            if thing_field['name'] == variable:
+                                field['value'] = re.sub(r'\$\{' + variable + '\}', thing_field['value'], field['value'])
+                                break
+                        for thing_field in fields_to_save['attribute_values']:
+                            if thing_field['attribute'].name.lower() == variable.lower():
+                                field['value'] = re.sub(r'\$\{' + variable + '\}', thing_field['value'], field['value'])
+                                break
+            setattr(thing, field['name'], field['value'])
 
     try:
         if thing.name:
@@ -1462,7 +1468,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
         return None
 
     for attribute_value_data in fields_to_save['attribute_values']:
-        var_search = re.search(r'\$\{(.+)\}', attribute_value_data['value'])
+        var_search = re.search(variable_regex, attribute_value_data['value'])
         if var_search:
             variable = var_search.group(1)
             if '.' in variable:
@@ -1496,7 +1502,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
                 attribute_value = AttributeValue(thing=thing, attribute=attribute, value=child_object.name)
                 attribute_value.save()
 
-                var_search = re.search(r'\$\{(.+)\}', thing.name)
+                var_search = re.search(variable_regex, thing.name)
                 if var_search:
                     variable = var_search.group(1)
                     if variable == attribute_for_container:
