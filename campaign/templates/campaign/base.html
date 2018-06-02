@@ -36,6 +36,9 @@
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item" href="{% url 'campaign:new_thing' thing_type %}">New {{ thing_type }}</a>
                                     <a class="dropdown-item" href="{% url 'campaign:select_generator' thing_type %}">Random {{ thing_type }}</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="{% url 'campaign:new_generator' thing_type %}">New {{ thing_type }} generator</a>
+                                    <a class="dropdown-item" href="{% url 'campaign:manage_generators' thing_type %}">Manage {{ thing_type }} generators</a>
                                 </div>
                             </li>
                         {% endfor %}

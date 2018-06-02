@@ -179,3 +179,14 @@ class SelectPreset(forms.Form):
     def refresh_fields(self, attribute_name, campaign):
         choices = [(p.name, p.name) for p in WeightPreset.objects.filter(attribute_name__iexact=attribute_name, campaign=campaign)]
         self.fields['preset'].choices = choices
+
+
+class GeneratorObjectForm(forms.Form):
+    name = forms.CharField(label='Name')
+    inherit_settings_from = forms.ModelChoiceField(label='Inherit settings from', queryset=GeneratorObject.objects.all(), required=False)
+    attribute_for_container = forms.CharField(label='Attribute for container', required=False)
+    contains = forms.CharField(label='Contains', widget=forms.Textarea, required=False)
+    mappings = forms.CharField(label='Mappings', widget=forms.Textarea)
+
+    def refresh_fields(self, thing_type):
+        self.fields['inherit_settings_from'].queryset = GeneratorObject.objects.filter(thing_type=thing_type)

@@ -8,8 +8,12 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm
 
+
+CONTAINS_REGEX = r'^(([\d]+)(-(\d+))? )?(([\w ]+)\.([\w ]+))$'
+MAPPING_REGEX = r'^((\w+): )?([\w ]+)(\.([\w ]+))?$'
+VARIABLE_REGEX = r'\$\{([^\}]+)\}'
 
 def build_context(context):
     campaign = Campaign.objects.get(is_active=True)
@@ -1435,16 +1439,15 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     'attribute': attribute,
                     'value': value
                 })
-    
-    variable_regex = r'\$\{([^\}]+)\}'
+
     for field in fields_to_save['thing']:
         if field['value']:
-            var_search = re.findall(variable_regex, field['value'])
+            var_search = re.findall(VARIABLE_REGEX, field['value'])
             if var_search:
                 for variable in var_search:
                     if '.' in variable:
                         parts = variable.split('.')
-                        if parts[0] == 'parent':
+                        if parts[0] == 'parent' and parent_object:
                             field['value'] = re.sub(r'\$\{' + variable + '\}', getattr(parent_object, parts[1]), field['value'])
                     else:
                         for thing_field in fields_to_save['thing']:
@@ -1468,7 +1471,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
         return None
 
     for attribute_value_data in fields_to_save['attribute_values']:
-        var_search = re.search(variable_regex, attribute_value_data['value'])
+        var_search = re.search(VARIABLE_REGEX, attribute_value_data['value'])
         if var_search:
             variable = var_search.group(1)
             if '.' in variable:
@@ -1502,7 +1505,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
                 attribute_value = AttributeValue(thing=thing, attribute=attribute, value=child_object.name)
                 attribute_value.save()
 
-                var_search = re.search(variable_regex, thing.name)
+                var_search = re.search(VARIABLE_REGEX, thing.name)
                 if var_search:
                     variable = var_search.group(1)
                     if variable == attribute_for_container:
@@ -1512,3 +1515,161 @@ def generate_thing(generator_object, campaign, parent_object=None):
                         thing.save()
 
     return thing
+
+
+def save_containers(generator_object, container_text):
+    for container in container_text.split('\n'):
+        container = container.strip()
+        contains_search = re.search(CONTAINS_REGEX, container)
+        if contains_search:
+            min = contains_search.group(2) or 1
+            max = contains_search.group(4) or 1
+            thing_type_name = contains_search.group(6)
+            contained_name = contains_search.group(7)
+            contained_object = GeneratorObject.objects.get(thing_type__name__iexact=thing_type_name,
+                                                           name__iexact=contained_name)
+            object_contains = GeneratorObjectContains(generator_object=generator_object,
+                                                      contained_object=contained_object,
+                                                      min_objects=min,
+                                                      max_objects=max)
+            object_contains.save()
+
+
+def save_mappings(generator_object, mapping_text):
+    for mapping in mapping_text.split('\n'):
+        mapping = mapping.strip()
+        mapping_search = re.search(MAPPING_REGEX, mapping)
+        if mapping_search:
+            field_name = mapping_search.group(2)
+            attribute_name = mapping_search.group(3)
+            category_name = mapping_search.group(5)
+
+            attribute = None
+            category = None
+            if attribute_name:
+                attribute = RandomizerAttribute.objects.get(thing_type=generator_object.thing_type,
+                                                            name__iexact=attribute_name)
+                if category_name:
+                    category = RandomizerAttributeCategory.objects.get(attribute=attribute,
+                                                                       name__iexact=category_name)
+            if category:
+                generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
+                                                                                     field_name=field_name,
+                                                                                     randomizer_attribute_category=category)
+                generator_object_mapping.save()
+            elif attribute:
+                generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
+                                                                                     field_name=field_name,
+                                                                                     randomizer_attribute=attribute)
+                generator_object_mapping.save()
+            else:
+                generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
+                                                                                     field_name=field_name)
+                generator_object_mapping.save()
+
+
+def new_generator_object(request, thing_type_name):
+    thing_type = get_object_or_404(ThingType, name=thing_type_name)
+
+    if request.method == 'POST':
+        form = GeneratorObjectForm(request.POST)
+        form.refresh_fields(thing_type)
+        if form.is_valid():
+            generator_object = GeneratorObject(name=form.cleaned_data['name'], thing_type=thing_type,
+                                               inherit_settings_from=form.cleaned_data['inherit_settings_from'],
+                                               attribute_for_container=form.cleaned_data['attribute_for_container'])
+            generator_object.save()
+
+            save_containers(generator_object, form.cleaned_data['contains'])
+            save_mappings(generator_object, form.cleaned_data['mappings'])
+            return HttpResponseRedirect(reverse('campaign:list_everything'))
+        else:
+            print(form.errors)
+    else:
+        form = GeneratorObjectForm()
+        form.refresh_fields(thing_type)
+
+    context = {
+        'form': form,
+        'header': 'Create a new generator',
+        'url': reverse('campaign:new_generator', args=(thing_type.name,))
+    }
+
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def edit_generator_object(request, name):
+    generator_object = get_object_or_404(GeneratorObject, name__iexact=name)
+
+    if request.method == 'POST':
+        form = GeneratorObjectForm(request.POST)
+        form.refresh_fields(generator_object.thing_type)
+        if form.is_valid():
+            GeneratorObjectContains.objects.filter(generator_object=generator_object).delete()
+            GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=generator_object).delete()
+            save_containers(generator_object, form.cleaned_data['contains'])
+            save_mappings(generator_object, form.cleaned_data['mappings'])
+            return HttpResponseRedirect(reverse('campaign:list_everything'))
+        else:
+            print(form.errors)
+    else:
+        contains = ''
+        for container in GeneratorObjectContains.objects.filter(generator_object=generator_object):
+            if container.min_objects == 1 and container.max_objects == 1:
+                contains += '{0}.{1}\n'.format(container.contained_object.thing_type.name, container.contained_object.name)
+            else:
+                contains += '{0}-{1} {2}.{3}\n'.format(container.min_objects, container.max_objects,
+                                                     container.contained_object.thing_type.name,
+                                                     container.contained_object.name)
+        mappings = ''
+        for mapping in GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=generator_object):
+            if mapping.field_name:
+                if mapping.randomizer_attribute_category:
+                    mappings += '{0}: {1}.{2}\n'.format(mapping.field_name,
+                                                      mapping.randomizer_attribute_category.attribute.name,
+                                                      mapping.randomizer_attribute_category.name)
+                elif mapping.randomizer_attribute:
+                    mappings += '{0}: {1}\n'.format(mapping.field_name,
+                                                  mapping.randomizer_attribute.name)
+            elif mapping.randomizer_attribute_category:
+                mappings += '{0}.{1}\n'.format(mapping.randomizer_attribute_category.attribute.name,
+                                             mapping.randomizer_attribute_category.name)
+            elif mapping.randomizer_attribute:
+                mappings += '{0}\n'.format(mapping.randomizer_attribute.name)
+        form = GeneratorObjectForm({
+            'name': generator_object.name,
+            'inherit_settings_from': generator_object.inherit_settings_from,
+            'attribute_for_container': generator_object.attribute_for_container,
+            'contains': contains,
+            'mappings': mappings
+        })
+
+    context = {
+        'form': form,
+        'header': 'Edit {0} generator'.format(generator_object.name),
+        'url': reverse('campaign:edit_generator', args=(generator_object.name,))
+    }
+
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def select_generator_to_edit(request, thing_type_name):
+    thing_type = get_object_or_404(ThingType, name__iexact=thing_type_name)
+
+    if request.method == 'POST':
+        form = SelectGeneratorObject(request.POST)
+        form.refresh_fields(thing_type)
+
+        if form.is_valid():
+            return HttpResponseRedirect(reverse('campaign:edit_generator', args=(form.cleaned_data['generator_object'],)))
+    else:
+        form = SelectGeneratorObject()
+        form.refresh_fields(thing_type)
+
+    context = {
+        'form': form,
+        'header': 'Select {0} generator to edit'.format(thing_type.name),
+        'url': reverse('campaign:manage_generators', args=(thing_type.name,))
+    }
+
+    return render(request, 'campaign/edit_page.html', build_context(context))
