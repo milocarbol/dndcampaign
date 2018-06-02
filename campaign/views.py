@@ -1448,7 +1448,11 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     if '.' in variable:
                         parts = variable.split('.')
                         if parts[0] == 'parent' and parent_object:
-                            field['value'] = re.sub(r'\$\{' + variable + '\}', getattr(parent_object, parts[1]), field['value'])
+                            try:
+                                parent_value = getattr(parent_object, parts[1])
+                            except AttributeError:
+                                parent_value = AttributeValue.objects.get(attribute__name__iexact=parts[1], thing=parent_object).value
+                            field['value'] = re.sub(r'\$\{' + variable + '\}', parent_value, field['value'])
                     else:
                         for thing_field in fields_to_save['thing']:
                             if thing_field['name'] == variable:
@@ -1476,8 +1480,12 @@ def generate_thing(generator_object, campaign, parent_object=None):
             variable = var_search.group(1)
             if '.' in variable:
                 parts = variable.split('.')
-                if parts[0] == 'parent':
-                    attribute_value_data['value'] = re.sub(r'\$\{.+\}', getattr(parent_object, parts[1]), attribute_value_data['value'])
+                if parts[0] == 'parent' and parent_object:
+                    try:
+                        parent_value = getattr(parent_object, parts[1])
+                    except AttributeError:
+                        parent_value = AttributeValue.objects.get(attribute__name__iexact=parts[1], thing=parent_object).value
+                    attribute_value_data['value'] = re.sub(r'\$\{.+\}', parent_value, attribute_value_data['value'])
         attribute_value = AttributeValue(thing=thing, attribute=attribute_value_data['attribute'], value=attribute_value_data['value'])
         attribute_value.save()
 
