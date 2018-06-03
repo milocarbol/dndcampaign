@@ -8,7 +8,7 @@ from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
+from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
 
 
@@ -921,6 +921,63 @@ def edit_random_encounters(request, name, type_name):
         'header': 'Edit {0} encounters for {1}'.format(type_name, thing.name),
         'url': reverse('campaign:edit_encounters', args=(thing.name, type_name)),
         'form': form
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def randomize_name(request, thing_type_name, name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing_type = get_object_or_404(ThingType, name__iexact=thing_type_name)
+    thing = get_object_or_404(Thing, campaign=campaign, name__iexact=name)
+
+    if thing_type.name == 'NPC':
+        name_pieces = name.split(' ')
+        thing.name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Race', thing=thing).value)
+        new_name_pieces = thing.name.split(' ')
+        thing.description = thing.description.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+        thing.save()
+
+        try:
+            faction = Thing.objects.get(campaign=campaign, thing_type__name='Faction', children=thing)
+            try:
+                leader = AttributeValue.objects.get(attribute__name='Leader', thing=faction)
+                leader.value = leader.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+                leader.save()
+            except AttributeValue.DoesNotExist:
+                pass
+        except Thing.DoesNotExist:
+            pass
+        try:
+            location = Thing.objects.get(campaign=campaign, thing_type__name='Location', children=thing)
+            try:
+                ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=location)
+                ruler.value = ruler.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+                ruler.save()
+            except AttributeValue.DoesNotExist:
+                pass
+        except Thing.DoesNotExist:
+            pass
+
+    return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+
+
+def edit_name(request, name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+
+    if request.method == 'POST':
+        form = ChangeRequiredTextAttributeForm(request.POST)
+        if form.is_valid():
+            thing.name = form.cleaned_data['value']
+            thing.save()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = ChangeRequiredTextAttributeForm({'value': thing.name})
+
+    context = {
+        'form': form,
+        'header': 'Edit name for {0}'.format(thing.name),
+        'url': reverse('campaign:edit_name', args=(thing.name,))
     }
     return render(request, 'campaign/edit_page.html', build_context(context))
 

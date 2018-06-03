@@ -63,7 +63,7 @@ class NewFactionForm(forms.Form):
     location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
     npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
 
-    leader = forms.ModelChoiceField(label='Leader', queryset=Thing.objects.all())
+    leader = forms.ModelChoiceField(label='Leader', queryset=Thing.objects.all(), required=False)
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
     power = forms.ChoiceField(label='Power', choices=MAGNITUDE_CHOICES)
     reach = forms.ChoiceField(label='Reach', choices=MAGNITUDE_CHOICES)
@@ -109,6 +109,10 @@ class EditDescriptionForm(forms.Form):
 
 class ChangeTextAttributeForm(forms.Form):
     value = forms.CharField(label='Value', required=False)
+
+
+class ChangeRequiredTextAttributeForm(forms.Form):
+    value = forms.CharField(label='Value')
 
 
 class ChangeOptionAttributeForm(forms.Form):
