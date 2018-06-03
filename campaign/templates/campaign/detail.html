@@ -97,7 +97,10 @@
                     Options
                 </button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <a class="dropdown-item" href="{% url 'campaign:move_thing' thing.name %}">Move</a>
+                    <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Location' thing.name %}">Move</a>
+                    {% if thing.thing_type == 'NPC' %}
+                        <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Faction' thing.name %}">Set faction</a>
+                    {% endif %}
                     <a class="dropdown-item" href="{% url 'campaign:add_link' thing.name %}">Add link</a>
                     <div class="dropdown-divider"></div>
                     {% if thing.is_bookmarked %}

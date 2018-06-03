@@ -8,7 +8,7 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeLocationForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm
 
 
 CONTAINS_REGEX = r'^(([\d]+)(-(\d+))? )?(([\w ]+)\.([\w ]+))$'
@@ -181,6 +181,7 @@ def detail(request, name):
 
     thing_info = {
         'name': thing.name,
+        'thing_type': thing.thing_type.name,
         'description': thing.description,
         'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
@@ -588,34 +589,35 @@ def save_settings(json_file):
 
     return HttpResponseRedirect(reverse('campaign:list_everything'))
 
-def move_thing(request, name):
+
+def change_parent(request, thing_type_name, name):
     campaign = Campaign.objects.get(is_active=True)
+    thing_type = get_object_or_404(ThingType, name=thing_type_name)
     thing = get_object_or_404(Thing, campaign=campaign, name=name)
 
     if request.method == 'POST':
-        form = ChangeLocationForm(request.POST)
+        form = ChangeParentForm(request.POST)
         if form.is_valid():
-            for old_location in Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location'):
-                old_location.children.remove(thing)
-                old_location.save()
-            if not form.cleaned_data['clear_location'] and form.cleaned_data['location']:
-                new_location = get_object_or_404(Thing, campaign=campaign, thing_type__name='Location', name=form.cleaned_data['location'])
-                new_location.children.add(thing)
-                new_location.save()
+            for old_parent in Thing.objects.filter(campaign=campaign, children=thing, thing_type=thing_type):
+                old_parent.children.remove(thing)
+                old_parent.save()
+            if not form.cleaned_data['clear_parent'] and form.cleaned_data['parent']:
+                new_parent = get_object_or_404(Thing, campaign=campaign, thing_type=thing_type, name=form.cleaned_data['parent'])
+                new_parent.children.add(thing)
+                new_parent.save()
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
-        current_locations = Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location')
-        if len(current_locations) == 0:
-            current_location = None
-        else:
-            current_location = current_locations[0].pk
-        form = ChangeLocationForm({'location': current_location})
-        form.refresh_fields()
+        try:
+            current_parent = Thing.objects.get(campaign=campaign, children=thing, thing_type=thing_type).pk
+        except Thing.DoesNotExist:
+            current_parent = None
+        form = ChangeParentForm({'parent': current_parent})
+        form.refresh_fields(thing_type=thing_type)
 
     context = {
         'thing': thing,
-        'url': reverse('campaign:move_thing', args=(thing.name,)),
-        'header': 'Change location for {0} '.format(thing.name),
+        'url': reverse('campaign:change_parent', args=(thing_type.name, thing.name)),
+        'header': 'Change {0} for {1} '.format(thing_type.name, thing.name),
         'form': form
     }
     return render(request, 'campaign/edit_page.html', build_context(context))
