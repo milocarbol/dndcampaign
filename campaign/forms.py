@@ -186,7 +186,7 @@ class GeneratorObjectForm(forms.Form):
     inherit_settings_from = forms.ModelChoiceField(label='Inherit settings from', queryset=GeneratorObject.objects.all(), required=False)
     attribute_for_container = forms.CharField(label='Attribute for container', required=False)
     contains = forms.CharField(label='Contains', widget=forms.Textarea, required=False)
-    mappings = forms.CharField(label='Mappings', widget=forms.Textarea)
+    mappings = forms.CharField(label='Mappings', widget=forms.Textarea, required=False)
 
     def refresh_fields(self, thing_type):
         self.fields['inherit_settings_from'].queryset = GeneratorObject.objects.filter(thing_type=thing_type)

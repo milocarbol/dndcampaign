@@ -317,9 +317,19 @@ def export(request):
             'random_attributes': [a.text for a in RandomAttribute.objects.filter(thing=thing)],
             'is_bookmarked': thing.is_bookmarked
         })
+    weight_presets = []
+    for weight_preset in WeightPreset.objects.filter(campaign=campaign):
+        weights = [{'name_to_weight': w.name_to_weight, 'weight': w.weight} for w in Weight.objects.filter(weight_preset=weight_preset)]
+        weight_presets.append({
+            'name': weight_preset.name,
+            'is_active': weight_preset.is_active,
+            'attribute_name': weight_preset.attribute_name,
+            'weights': weights
+        })
 
     data = {
         'things': thing_data,
+        'weight_presets': weight_presets
     }
 
     response = JsonResponse(data)
@@ -377,6 +387,16 @@ def save_campaign(campaign, json_file):
         for child in thing['children']:
             thing_object.children.add(Thing.objects.get(campaign=campaign, name=child))
         thing_object.save()
+
+    WeightPreset.objects.filter(campaign=campaign).delete()
+    for weight_preset in data['weight_presets']:
+        preset = WeightPreset(name=weight_preset['name'], attribute_name=weight_preset['attribute_name'],
+                              is_active=weight_preset['is_active'], campaign=campaign)
+        preset.save()
+        for weight in weight_preset['weights']:
+            weight_object = Weight(weight_preset=preset, name_to_weight=weight['name_to_weight'],
+                                   weight=weight['weight'])
+            weight_object.save()
 
 
 def export_settings(request):
@@ -1403,17 +1423,17 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     'value': parameter
                 })
                 value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
-                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(name=value)) > 0:
+                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
                     print('Tried to use {0} but was in use'.format(value))
                     value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
             else:
                 value = get_random_attribute_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
-                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(name=value)) > 0:
+                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
                     print('Tried to use {0} but was in use'.format(value))
                     value = get_random_attribute_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
         else:
             value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
-            while field_mapping.randomizer_attribute_category.must_be_unique and len(Thing.objects.filter(name=value)) > 0:
+            while field_mapping.randomizer_attribute_category.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
                 print('Tried to use {0} but was in use'.format(value))
                 value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
 
