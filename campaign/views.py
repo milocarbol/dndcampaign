@@ -1524,6 +1524,11 @@ def generate_thing(generator_object, campaign, parent_object=None):
             print('Adding {0} to {1}...'.format(child_object.name, thing.name))
             thing.children.add(child_object)
             thing.save()
+            if thing.thing_type.name == 'Location':
+                for child_faction in thing.children.filter(thing_type__name='Faction'):
+                    for faction_npc in child_faction.children.filter(thing_type__name='NPC'):
+                        thing.children.add(faction_npc)
+                        thing.save()
             attribute_for_container = child.contained_object.attribute_for_container
             inherit_settings_from = child.contained_object.inherit_settings_from
             while not attribute_for_container and inherit_settings_from:
