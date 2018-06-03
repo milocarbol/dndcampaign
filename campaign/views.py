@@ -8,7 +8,7 @@ from django.urls import reverse
 from operator import methodcaller
 
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
-from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm
+from .forms import AddLinkForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
 
 
 CONTAINS_REGEX = r'^(([\d]+)(-(\d+))? )?(([\w ]+)\.([\w ]+))$'
@@ -1366,12 +1366,17 @@ def manage_weights(request, preset_name, attribute_name):
 def select_object_to_generate(request, thing_type):
     thing_type = get_object_or_404(ThingType, name__iexact=thing_type)
     if request.method == 'POST':
-        form = SelectGeneratorObject(request.POST)
+        form = SelectGeneratorObjectWithLocation(request.POST)
         form.refresh_fields(thing_type)
         if form.is_valid():
-            return HttpResponseRedirect(reverse('campaign:generate', args=(form.cleaned_data['generator_object'],)))
+            if form.cleaned_data['parent']:
+                return HttpResponseRedirect(reverse('campaign:generate_in_location',
+                                                    args=(form.cleaned_data['parent'],
+                                                          form.cleaned_data['generator_object'])))
+            else:
+                return HttpResponseRedirect(reverse('campaign:generate', args=(form.cleaned_data['generator_object'],)))
     else:
-        form = SelectGeneratorObject()
+        form = SelectGeneratorObjectWithLocation()
         form.refresh_fields(thing_type)
     context = {
         'form': form,
@@ -1385,6 +1390,16 @@ def generate_object(request, name):
     generator_object = get_object_or_404(GeneratorObject, name=name)
     campaign = get_object_or_404(Campaign, is_active=True)
     thing = generate_thing(generator_object, campaign)
+    return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+
+
+def generate_object_in_location(request, location_name, generator_name):
+    generator_object = get_object_or_404(GeneratorObject, name=generator_name)
+    campaign = get_object_or_404(Campaign, is_active=True)
+    parent = get_object_or_404(Thing, thing_type__name='Location', name__iexact=location_name)
+    thing = generate_thing(generator_object, campaign, parent)
+    parent.children.add(thing)
+    parent.save()
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
 

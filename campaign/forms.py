@@ -162,6 +162,15 @@ class SelectGeneratorObject(forms.Form):
         self.fields['generator_object'].queryset = GeneratorObject.objects.filter(thing_type=thing_type)
 
 
+class SelectGeneratorObjectWithLocation(forms.Form):
+    generator_object = forms.ModelChoiceField(label='Object', queryset=GeneratorObject.objects.all())
+    parent = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
+
+    def refresh_fields(self, thing_type):
+        self.fields['generator_object'].queryset = GeneratorObject.objects.filter(thing_type=thing_type).order_by('name')
+        self.fields['parent'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Location').order_by('name')
+
+
 class NewPreset(forms.Form):
     name = forms.CharField(label='Name')
     attribute_name = forms.ChoiceField(label='Attribute', choices=[])

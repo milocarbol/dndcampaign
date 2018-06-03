@@ -33,6 +33,7 @@ urlpatterns = [
     path('delete_random/<name>/<random_attribute_id>', views.delete_random_attribute_for_thing, name='delete_random'),
     path('bookmark/<name>', views.bookmark, name='bookmark'),
     path('generate/<name>', views.generate_object, name='generate'),
+    path('generate_in_location/<location_name>/<generator_name>', views.generate_object_in_location, name='generate_in_location'),
     path('select_generator/<thing_type>', views.select_object_to_generate, name='select_generator'),
     path('new_generator/<thing_type_name>', views.new_generator_object, name='new_generator'),
     path('manage_generators/<thing_type_name>', views.select_generator_to_edit, name='manage_generators'),
