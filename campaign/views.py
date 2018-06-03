@@ -743,6 +743,10 @@ def create_new_faction(request):
             if form.cleaned_data['leader']:
                 leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'])
                 leader.save()
+                leader_thing = Thing.objects.get(campaign=campaign, thing_type__name='NPC', name=form.cleaned_data['leader'])
+                if not leader_thing in thing.children.all():
+                    thing.children.add(leader_thing)
+                    thing.save()
 
             if form.cleaned_data['attitude']:
                 attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='Faction'), value=form.cleaned_data['attitude'])
