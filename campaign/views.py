@@ -931,56 +931,63 @@ def randomize_name(request, thing_type_name, name):
     thing = get_object_or_404(Thing, campaign=campaign, name__iexact=name)
 
     name_pieces = name.split(' ')
-    thing.name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing).value)
-    new_name_pieces = thing.name.split(' ')
-    thing.description = thing.description.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-    thing.save()
+    try:
+        name_randomizer = AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing)
+    except AttributeValue.DoesNotExist:
+        name_randomizer = None
 
-    print('Regenerating name for {0}: {1}'.format(name, thing.name))
-    if thing_type.name == 'NPC':
-        try:
-            faction = Thing.objects.get(campaign=campaign, thing_type__name='Faction', children=thing)
+    if name_randomizer:
+        thing.name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing).value)
+        new_name_pieces = thing.name.split(' ')
+        thing.description = thing.description.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+        thing.save()
+
+        print('Regenerating name for {0}: {1}'.format(name, thing.name))
+        if thing_type.name == 'NPC':
             try:
-                leader = AttributeValue.objects.get(attribute__name='Leader', thing=faction)
-                leader.value = leader.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-                leader.save()
-                print('Updated leader attribute of {0}: {1}'.format(faction.name, leader.value))
+                faction = Thing.objects.get(campaign=campaign, thing_type__name='Faction', children=thing)
+                try:
+                    leader = AttributeValue.objects.get(attribute__name='Leader', thing=faction)
+                    leader.value = leader.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+                    leader.save()
+                    print('Updated leader attribute of {0}: {1}'.format(faction.name, leader.value))
+                except AttributeValue.DoesNotExist:
+                    pass
+            except Thing.DoesNotExist:
+                pass
+            try:
+                location = Thing.objects.get(campaign=campaign, thing_type__name='Location', children=thing)
+                try:
+                    ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=location)
+                    ruler.value = ruler.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+                    ruler.save()
+                    print('Updated ruler attribute of {0}: {1}'.format(location.name, ruler.value))
+                except AttributeValue.DoesNotExist:
+                    pass
+            except Thing.DoesNotExist:
+                pass
+        elif thing_type.name == 'Location':
+            try:
+                ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=thing)
+                npc = Thing.objects.get(thing_type__name='NPC', name=ruler.value)
+                npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
+                npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+                npc_occupation.save()
+                print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
             except AttributeValue.DoesNotExist:
                 pass
-        except Thing.DoesNotExist:
-            pass
-        try:
-            location = Thing.objects.get(campaign=campaign, thing_type__name='Location', children=thing)
+        elif thing_type.name == 'Faction':
             try:
-                ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=location)
-                ruler.value = ruler.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-                ruler.save()
-                print('Updated ruler attribute of {0}: {1}'.format(location.name, ruler.value))
+                leader = AttributeValue.objects.get(attribute__name='Leader', thing=thing)
+                npc = Thing.objects.get(thing_type__name='NPC', name=leader.value)
+                npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
+                npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+                npc_occupation.save()
+                print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
             except AttributeValue.DoesNotExist:
                 pass
-        except Thing.DoesNotExist:
-            pass
-    elif thing_type.name == 'Location':
-        try:
-            ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=thing)
-            npc = Thing.objects.get(thing_type__name='NPC', name=ruler.value)
-            npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
-            npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-            npc_occupation.save()
-            print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
-        except AttributeValue.DoesNotExist:
-            pass
-    elif thing_type.name == 'Faction':
-        try:
-            leader = AttributeValue.objects.get(attribute__name='Leader', thing=thing)
-            npc = Thing.objects.get(thing_type__name='NPC', name=leader.value)
-            npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
-            npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-            npc_occupation.save()
-            print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
-        except AttributeValue.DoesNotExist:
-            pass
-
+    else:
+        print('Cannot randomize name for {0}: no name randomizer set (likely not a generated object).'.format(thing.name))
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
 
