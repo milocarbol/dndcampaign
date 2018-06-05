@@ -930,19 +930,21 @@ def randomize_name(request, thing_type_name, name):
     thing_type = get_object_or_404(ThingType, name__iexact=thing_type_name)
     thing = get_object_or_404(Thing, campaign=campaign, name__iexact=name)
 
-    if thing_type.name == 'NPC':
-        name_pieces = name.split(' ')
-        thing.name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Race', thing=thing).value)
-        new_name_pieces = thing.name.split(' ')
-        thing.description = thing.description.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-        thing.save()
+    name_pieces = name.split(' ')
+    thing.name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing).value)
+    new_name_pieces = thing.name.split(' ')
+    thing.description = thing.description.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+    thing.save()
 
+    print('Regenerating name for {0}: {1}'.format(name, thing.name))
+    if thing_type.name == 'NPC':
         try:
             faction = Thing.objects.get(campaign=campaign, thing_type__name='Faction', children=thing)
             try:
                 leader = AttributeValue.objects.get(attribute__name='Leader', thing=faction)
                 leader.value = leader.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
                 leader.save()
+                print('Updated leader attribute of {0}: {1}'.format(faction.name, leader.value))
             except AttributeValue.DoesNotExist:
                 pass
         except Thing.DoesNotExist:
@@ -953,9 +955,30 @@ def randomize_name(request, thing_type_name, name):
                 ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=location)
                 ruler.value = ruler.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
                 ruler.save()
+                print('Updated ruler attribute of {0}: {1}'.format(location.name, ruler.value))
             except AttributeValue.DoesNotExist:
                 pass
         except Thing.DoesNotExist:
+            pass
+    elif thing_type.name == 'Location':
+        try:
+            ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=thing)
+            npc = Thing.objects.get(thing_type__name='NPC', name=ruler.value)
+            npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
+            npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+            npc_occupation.save()
+            print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
+        except AttributeValue.DoesNotExist:
+            pass
+    elif thing_type.name == 'Faction':
+        try:
+            leader = AttributeValue.objects.get(attribute__name='Leader', thing=thing)
+            npc = Thing.objects.get(thing_type__name='NPC', name=leader.value)
+            npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
+            npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
+            npc_occupation.save()
+            print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
+        except AttributeValue.DoesNotExist:
             pass
 
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
@@ -1587,6 +1610,14 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     attribute_value_data['value'] = re.sub(r'\$\{.+\}', parent_value, attribute_value_data['value'])
         attribute_value = AttributeValue(thing=thing, attribute=attribute_value_data['attribute'], value=attribute_value_data['value'])
         attribute_value.save()
+
+    name_randomizer_attribute = Attribute.objects.get(thing_type=thing.thing_type, name='Name Randomizer')
+    name_randomizer = AttributeValue(thing=thing, attribute=name_randomizer_attribute)
+    if thing.thing_type.name == 'NPC':
+        name_randomizer.value = AttributeValue.objects.get(thing=thing, attribute__name='Race').value
+    elif thing.thing_type.name == 'Faction' or thing.thing_type.name == 'Location':
+        name_randomizer.value = generator_object.name
+    name_randomizer.save()
 
     for attribute in fields_to_save['random_attributes']:
         randomizer_attribute = RandomizerAttribute.objects.get(thing_type=thing.thing_type, name__iexact=attribute.name)
