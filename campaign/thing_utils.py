@@ -346,7 +346,7 @@ def randomize_name_for_thing(thing):
 
     if name_randomizer:
         new_name = None
-        while not new_name or Thing.objects.filter(name__iexact=new_name):
+        while not new_name or thing.name != new_name and Thing.objects.filter(name__iexact=new_name):
             if new_name:
                 logger.debug('Tried randomizing {0} to {1} but it was in use.'.format(thing.name, new_name))
             else:
