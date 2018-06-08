@@ -1,20 +1,14 @@
-import json
-import random
-import re
-from operator import methodcaller
-
-from django.db import IntegrityError
 from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
+from .export_utils import get_campaign_json, get_settings_json, save_campaign, save_settings
 from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
+from .randomizers import get_randomization_options_for_new_thing, get_random_attribute_in_category_raw, get_random_attribute_raw, generate_random_attributes_for_thing_raw
+from .thing_generator import generate_thing, save_new_generator, edit_generator
+from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, randomize_name_for_thing
 
-
-CONTAINS_REGEX = r'^(([\d]+)(-(\d+))? )?(([\w ]+)\.([\w ]+))$'
-MAPPING_REGEX = r'^((\w+): )?([\w ]+)(\.([\w ]+))?$'
-VARIABLE_REGEX = r'\$\{([^\}]+)\}'
 
 def build_context(context):
     campaign = Campaign.objects.get(is_active=True)
@@ -79,25 +73,7 @@ def go_to_closest_thing(campaign, name):
 def list_all(request, thing_type):
     campaign = Campaign.objects.get(is_active=True)
 
-    if thing_type:
-        types = [thing_type]
-    else:
-        types = [thing.name for thing in ThingType.objects.all()]
-
-    list_data = []
-
-    for t in types:
-        data_for_type = []
-        for thing in Thing.objects.filter(campaign=campaign, thing_type__name__iexact=t).order_by('name'):
-            data_for_type.append({
-                'name': thing.name,
-                'description': thing.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=thing)
-            })
-        list_data.append({
-            'name': '{0}s'.format(t),
-            'things': data_for_type
-        })
+    list_data = get_list_data(campaign=campaign, thing_type=thing_type)
 
     context = {
         'types': list_data,
@@ -105,7 +81,7 @@ def list_all(request, thing_type):
         'thing_url': '/campaign/thing/',
         'beyond_link_marker': '$',
         'beyond_url': 'https://www.dndbeyond.com/monsters/',
-        'filters': order_attribute_filters(get_attribute_filters(list_data))
+        'filters': get_filters(list_data)
     }
 
     return render(request, 'campaign/list.html', build_context(context))
@@ -122,219 +98,20 @@ def detail(request, name):
     except Thing.DoesNotExist:
         return go_to_closest_thing(campaign=campaign, name=name)
 
-    parent_locations = []
-    parent_factions = []
-    for parent in Thing.objects.filter(campaign=campaign, children=thing).order_by('name'):
-        if parent.thing_type.name == 'Location':
-            parent_locations.append({
-                'name': parent.name,
-                'description': parent.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=parent)
-            })
-        elif parent.thing_type.name == 'Faction':
-            parent_factions.append({
-                'name': parent.name,
-                'description': parent.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=parent)
-            })
-
-    child_locations = []
-    child_factions = []
-    child_npcs = []
-    for child in thing.children.order_by('name'):
-        if child.thing_type.name == 'Location':
-            child_locations.append({
-                'name': child.name,
-                'description': child.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
-            })
-        elif child.thing_type.name == 'Faction':
-            child_factions.append({
-                'name': child.name,
-                'description': child.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
-            })
-        elif child.thing_type.name == 'NPC':
-            child_npcs.append({
-                'name': child.name,
-                'description': child.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
-            })
-
-    encounter_types = [t.name for t in RandomEncounterType.objects.all()]
-    encounter_types.sort()
-    encounters = []
-    display_encounters = False
-    for encounter_type in encounter_types:
-        random_encounters = RandomEncounter.objects.filter(thing=thing, random_encounter_type__name=encounter_type)
-        if random_encounters:
-            display_encounters = True
-        encounters.append({
-            'count': len(random_encounters),
-            'encounter_type': encounter_type,
-            'list': random_encounters
-        })
-
-    editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type, display_in_summary=True).order_by('name')]
-
-    random_attributes = [{'text': r.text, 'id': r.pk} for r in RandomAttribute.objects.filter(thing=thing).order_by('text')]
-    randomizable_attributes = [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing.thing_type, can_randomize_later=True).order_by('name')]
-
-    thing_info = {
-        'name': thing.name,
-        'thing_type': thing.thing_type.name,
-        'description': thing.description,
-        'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
-        'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
-        'random_attributes': random_attributes,
-        'encounters': encounters,
-        'display_encounters': display_encounters,
-        'enable_random_encounters': thing.thing_type.name == 'Location',
-        'editable_attributes': editable_attributes,
-        'randomizable_attributes': randomizable_attributes,
-        'is_bookmarked': thing.is_bookmarked
-    }
-
-    attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=False).order_by('attribute__name')
-    for attribute_value in attribute_values:
-        thing_info[attribute_value.attribute.name.lower()] = attribute_value.value
-
     context = {
-        'thing': thing_info,
+        'thing': get_details(campaign=campaign, thing=thing),
         'thing_link_marker': '@',
         'thing_url': '/campaign/thing/',
         'beyond_link_marker': '$',
-        'beyond_url': 'https://www.dndbeyond.com/monsters/',
-        'parent_locations': parent_locations,
-        'parent_factions': parent_factions,
-        'child_locations': child_locations,
-        'child_npcs': child_npcs,
-        'child_factions': child_factions
+        'beyond_url': 'https://www.dndbeyond.com/monsters/'
     }
     return render(request, 'campaign/detail.html', build_context(context))
 
 
-def get_attributes_to_display(campaign, thing):
-    attributes_to_display = []
-    attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=True).order_by('attribute__name')
-    for attribute_value in attribute_values:
-        attributes_to_display.append({
-            'name': attribute_value.attribute.name,
-            'value': attribute_value.value,
-            'can_link': attribute_value.attribute.is_thing,
-            'js_class': get_js_class(attribute_value.attribute.name, attribute_value.value)
-        })
-
-    parent_location = get_parent_location(campaign=campaign, thing=thing)
-    if parent_location:
-        attributes_to_display.append({
-            'name': 'Location',
-            'value': parent_location,
-            'can_link': True,
-            'js_class': get_js_class('Location', parent_location)
-        })
-    return attributes_to_display
-
-
-def get_parent_location(campaign, thing):
-    parents = Thing.objects.filter(campaign=campaign, children=thing, thing_type__name='Location').order_by('name')
-    if len(parents) == 0:
-        return None
-    else:
-        return parents[0].name
-
-
-def get_js_class(name, value):
-    return re.sub(r'\W+', '-', '{0}-{1}'.format(name, value))
-
-
-def get_attribute_filters(list_data):
-    attribute_filter = {}
-
-    for thing_type in list_data:
-        for thing in thing_type['things']:
-            for attribute_value in thing['attributes']:
-                if attribute_value['name'] in attribute_filter:
-                    if attribute_value['value'] not in attribute_filter[attribute_value['name']]:
-                        attribute_filter[attribute_value['name']].append(attribute_value['value'])
-                else:
-                    attribute_filter[attribute_value['name']] = [attribute_value['value']]
-
-    for attribute_name in attribute_filter.keys():
-        values_with_js_classes = []
-        for value in attribute_filter[attribute_name]:
-            values_with_js_classes.append({
-                'value': value,
-                'class': get_js_class(attribute_name, value)
-            })
-        attribute_filter[attribute_name] = values_with_js_classes
-    return attribute_filter
-
-
-def order_attribute_filters(attribute_filters):
-    ordered_filters = []
-    for attribute, values in attribute_filters.items():
-        ordered_filters.append({
-            'name': attribute,
-            'values': values
-        })
-
-    for attribute_filter in ordered_filters:
-        sorted_values = sorted(attribute_filter['values'], key=methodcaller('get', 'value'))
-        attribute_filter['values'] = sorted_values
-    return sorted(ordered_filters, key=methodcaller('get', 'name'))
-
-
 def export(request):
     campaign = Campaign.objects.get(is_active=True)
-    thing_data = []
-    for thing in Thing.objects.filter(campaign=campaign):
-        attributes = []
-        attribute_values = AttributeValue.objects.filter(thing=thing)
-        for attribute_value in attribute_values:
-            attributes.append({
-                'attribute': attribute_value.attribute.name,
-                'value': attribute_value.value
-            })
-        links = []
-        for link in UsefulLink.objects.filter(thing=thing):
-            links.append({
-                'name': link.name,
-                'value': link.value
-            })
-        random_encounters = []
-        for random_encounter in RandomEncounter.objects.filter(thing=thing):
-            random_encounters.append({
-                'random_encounter_type': random_encounter.random_encounter_type.name,
-                'name': random_encounter.name
-            })
-        thing_data.append({
-            'name': thing.name,
-            'description': thing.description,
-            'thing_type': thing.thing_type.name,
-            'children': [child.name for child in thing.children.all()],
-            'attribute_values': attributes,
-            'links': links,
-            'random_encounters': random_encounters,
-            'random_attributes': [a.text for a in RandomAttribute.objects.filter(thing=thing)],
-            'is_bookmarked': thing.is_bookmarked
-        })
-    weight_presets = []
-    for weight_preset in WeightPreset.objects.filter(campaign=campaign):
-        weights = [{'name_to_weight': w.name_to_weight, 'weight': w.weight} for w in Weight.objects.filter(weight_preset=weight_preset)]
-        weight_presets.append({
-            'name': weight_preset.name,
-            'is_active': weight_preset.is_active,
-            'attribute_name': weight_preset.attribute_name,
-            'weights': weights
-        })
 
-    data = {
-        'things': thing_data,
-        'weight_presets': weight_presets
-    }
-
-    response = JsonResponse(data)
+    response = JsonResponse(get_campaign_json(campaign=campaign))
     response['Content-Disposition'] = 'attachment; filename="{0}.json"'.format(campaign.name.lower().replace(' ', '_'))
 
     return response
@@ -359,126 +136,8 @@ def import_campaign(request):
     return render(request, 'campaign/edit_page.html', build_context(context))
 
 
-def save_campaign(campaign, json_file):
-    Thing.objects.filter(campaign=campaign).delete()
-    data = json.loads(json_file)
-    for thing in data['things']:
-        thing_object = Thing(campaign=campaign, name=thing['name'], description=thing['description'],
-                             thing_type=ThingType.objects.get(name=thing['thing_type']),
-                             is_bookmarked=thing['is_bookmarked'])
-        thing_object.save()
-
-        for attribute in thing['attribute_values']:
-            attr_value_object = AttributeValue(thing=thing_object, attribute=Attribute.objects.get(name=attribute['attribute'], thing_type=thing_object.thing_type), value=attribute['value'])
-            attr_value_object.save()
-
-        for link in thing['links']:
-            link_object = UsefulLink(thing=thing_object, name=link['name'], value=link['value'])
-            link_object.save()
-
-        for random_encounter in thing['random_encounters']:
-            random_encounter_object = RandomEncounter(thing=thing_object, random_encounter_type=RandomEncounterType.objects.get(name=random_encounter['random_encounter_type']), name=random_encounter['name'])
-            random_encounter_object.save()
-
-        for random_attribute in thing['random_attributes']:
-            random_attribute_object = RandomAttribute(thing=thing_object, text=random_attribute)
-            random_attribute_object.save()
-
-    for thing in data['things']:
-        thing_object = Thing.objects.get(campaign=campaign, name=thing['name'])
-        for child in thing['children']:
-            thing_object.children.add(Thing.objects.get(campaign=campaign, name=child))
-        thing_object.save()
-
-    WeightPreset.objects.filter(campaign=campaign).delete()
-    for weight_preset in data['weight_presets']:
-        preset = WeightPreset(name=weight_preset['name'], attribute_name=weight_preset['attribute_name'],
-                              is_active=weight_preset['is_active'], campaign=campaign)
-        preset.save()
-        for weight in weight_preset['weights']:
-            weight_object = Weight(weight_preset=preset, name_to_weight=weight['name_to_weight'],
-                                   weight=weight['weight'])
-            weight_object.save()
-
-
 def export_settings(request):
-    thing_data = []
-    for thing_type in ThingType.objects.all():
-        attributes = []
-        for attribute in RandomizerAttribute.objects.filter(thing_type=thing_type).order_by('name'):
-            categories = []
-            for category in RandomizerAttributeCategory.objects.filter(attribute=attribute).order_by('name'):
-                category_options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=category).order_by('name')]
-                use_values_from = []
-                for category_for_values in category.use_values_from.all():
-                    use_values_from.append(category_for_values.name)
-                categories.append({
-                    'name': category.name,
-                    'show': category.show,
-                    'can_combine_with_self': category.can_combine_with_self,
-                    'max_options_to_use': category.max_options_to_use,
-                    'can_randomize_later': category.can_randomize_later,
-                    'must_be_unique': category.must_be_unique,
-                    'use_values_from': use_values_from,
-                    'options': category_options
-                })
-            attribute_data = {
-                'name': attribute.name,
-                'concatenate_results': attribute.concatenate_results,
-                'can_randomize_later': attribute.can_randomize_later,
-                'must_be_unique': attribute.must_be_unique,
-                'categories': categories,
-                'options': [o.name for o in RandomizerAttributeOption.objects.filter(attribute=attribute).order_by('name')]
-            }
-            if attribute.category_parameter:
-                attribute_data['category_parameter'] = attribute.category_parameter.name
-            else:
-                attribute_data['category_parameter'] = None
-            attributes.append(attribute_data)
-        thing_data.append({
-            'name': thing_type.name,
-            'attributes': attributes
-        })
-
-    generator_data = []
-    for generator_object in GeneratorObject.objects.all():
-        contains = []
-        for object_contains in GeneratorObjectContains.objects.filter(generator_object=generator_object):
-            contains.append({
-                'name': object_contains.contained_object.name,
-                'min_objects': object_contains.min_objects,
-                'max_objects': object_contains.max_objects
-            })
-        mappings = []
-        for mapping in GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=generator_object):
-            mapping_data = {
-                'field_name': mapping.field_name,
-                'randomizer_attribute': None,
-                'randomizer_attribute_category': None
-            }
-            if mapping.randomizer_attribute:
-                mapping_data['randomizer_attribute'] = mapping.randomizer_attribute.name
-            if mapping.randomizer_attribute_category:
-                mapping_data['randomizer_attribute_category'] = '{0}.{1}'.format(mapping.randomizer_attribute_category.attribute.name, mapping.randomizer_attribute_category.name)
-            mappings.append(mapping_data)
-        generator_object_data = {
-            'name': generator_object.name,
-            'thing_type': generator_object.thing_type.name,
-            'generator_object_contains': contains,
-            'attribute_for_container': generator_object.attribute_for_container,
-            'generator_object_field_to_randomizers': mappings
-        }
-        if generator_object.inherit_settings_from:
-            generator_object_data['inherit_settings_from'] = generator_object.inherit_settings_from.name
-        else:
-            generator_object_data['inherit_settings_from'] = None
-        generator_data.append(generator_object_data)
-    data = {
-        'thing_types': thing_data,
-        'generators': generator_data
-    }
-
-    response = JsonResponse(data)
+    response = JsonResponse(get_settings_json())
     response['Content-Disposition'] = 'attachment; filename="settings.json"'
 
     return response
@@ -500,95 +159,6 @@ def import_settings(request):
         'form': form
     }
     return render(request, 'campaign/edit_page.html', build_context(context))
-
-
-def save_settings(json_file):
-    data = json.loads(json_file)
-    for thing_type_data in data['thing_types']:
-        thing_type = ThingType.objects.get(name=thing_type_data['name'])
-        for attribute in thing_type_data['attributes']:
-            RandomizerAttribute.objects.filter(thing_type=thing_type, name=attribute['name']).delete()
-            randomizer_attribute = RandomizerAttribute(thing_type=thing_type,
-                                                       name=attribute['name'],
-                                                       concatenate_results=attribute['concatenate_results'],
-                                                       can_randomize_later=attribute['can_randomize_later'],
-                                                       must_be_unique=attribute['must_be_unique'])
-            randomizer_attribute.save()
-
-            for attribute_option in attribute['options']:
-                randomizer_attribute_option = RandomizerAttributeOption(attribute=randomizer_attribute,
-                                                                        name=attribute_option['name'])
-                randomizer_attribute_option.save()
-
-            for attribute_category in attribute['categories']:
-                randomizer_attribute_category = RandomizerAttributeCategory(attribute=randomizer_attribute,
-                                                                            name=attribute_category['name'],
-                                                                            show=attribute_category['show'],
-                                                                            can_combine_with_self=attribute_category['can_combine_with_self'],
-                                                                            max_options_to_use=attribute_category['max_options_to_use'],
-                                                                            can_randomize_later=attribute_category['can_randomize_later'],
-                                                                            must_be_unique=attribute['must_be_unique'])
-                randomizer_attribute_category.save()
-
-                for category_option in attribute_category['options']:
-                    randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
-                                                                                             name=category_option)
-                    randomizer_attribute_category_option.save()
-
-        for attribute in thing_type_data['attributes']:
-            randomizer_attribute = RandomizerAttribute.objects.get(thing_type=thing_type, name=attribute['name'])
-            if attribute['category_parameter']:
-                randomizer_attribute.category_parameter = RandomizerAttribute.objects.get(thing_type=thing_type, name=attribute['category_parameter'])
-                randomizer_attribute.save()
-            for category in attribute['categories']:
-                randomizer_attribute_category = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute, name=category['name'])
-                if category['use_values_from']:
-                    for value in category['use_values_from']:
-                        value_attribute = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute, name=value)
-                        randomizer_attribute_category.use_values_from.add(value_attribute)
-                        randomizer_attribute_category.save()
-
-    GeneratorObject.objects.all().delete()
-    for generator_data in data['generators']:
-        thing_type = ThingType.objects.get(name=generator_data['thing_type'])
-        generator_object = GeneratorObject(name=generator_data['name'],
-                                           thing_type=thing_type,
-                                           attribute_for_container=generator_data['attribute_for_container'])
-        generator_object.save()
-
-        for mapping in generator_data['generator_object_field_to_randomizers']:
-            randomizer_attribute = None
-            randomizer_attribute_category = None
-
-            if mapping['randomizer_attribute']:
-                randomizer_attribute = RandomizerAttribute.objects.get(thing_type=thing_type, name=mapping['randomizer_attribute'])
-            if mapping['randomizer_attribute_category']:
-                parts = mapping['randomizer_attribute_category'].split('.')
-                attribute = RandomizerAttribute.objects.get(thing_type=thing_type, name=parts[0])
-                randomizer_attribute_category = RandomizerAttributeCategory.objects.get(attribute=attribute, name=parts[1])
-
-            generator_object_field_to_randomizer_attribute = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
-                                                                                                       field_name=mapping['field_name'],
-                                                                                                       randomizer_attribute=randomizer_attribute,
-                                                                                                       randomizer_attribute_category=randomizer_attribute_category)
-            generator_object_field_to_randomizer_attribute.save()
-
-    for generator_data in data['generators']:
-        thing_type = ThingType.objects.get(name=generator_data['thing_type'])
-        generator_object = GeneratorObject.objects.get(thing_type=thing_type, name=generator_data['name'])
-
-        if generator_data['inherit_settings_from']:
-            generator_object.inherit_settings_from = GeneratorObject.objects.get(thing_type=thing_type, name=generator_data['inherit_settings_from'])
-            generator_object.save()
-        for contains in generator_data['generator_object_contains']:
-            contained_object = GeneratorObject.objects.get(name=contains['name'])
-            contains_entry = GeneratorObjectContains(generator_object=generator_object,
-                                                     contained_object=contained_object,
-                                                     min_objects=contains['min_objects'],
-                                                     max_objects=contains['max_objects'])
-            contains_entry.save()
-
-    return HttpResponseRedirect(reverse('campaign:list_everything'))
 
 
 def change_parent(request, thing_type_name, name):
@@ -636,6 +206,7 @@ def delete_thing_and_children(thing):
         child.delete()
     thing.delete()
 
+
 def new_thing(request, thing_type):
     if thing_type == 'Location':
         return create_new_location(request)
@@ -652,44 +223,7 @@ def create_new_location(request):
     if request.method == 'POST':
         form = NewLocationForm(request.POST)
         if form.is_valid():
-            thing = Thing(campaign=campaign, name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Location'))
-            thing.save()
-
-            children = []
-            children.extend(form.cleaned_data['factions'])
-            children.extend(form.cleaned_data['npcs'])
-
-            for child in children:
-                current_parent_locations = Thing.objects.filter(campaign=campaign, children=child, thing_type__name='Location')
-                for parent in current_parent_locations:
-                    parent.children.remove(child)
-                    parent.save()
-                thing.children.add(child)
-            thing.save()
-
-            new_parent = form.cleaned_data['location']
-
-            if new_parent:
-                new_parent.children.add(thing)
-                new_parent.save()
-
-            if form.cleaned_data['ruler']:
-                ruler = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Ruler'), value=form.cleaned_data['ruler'])
-                ruler.save()
-
-            if form.cleaned_data['population']:
-                randomized_population = '{:,}'.format(int(int(form.cleaned_data['population'])*random.randint(5, 15)/10))
-                population = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Population'), value=str(randomized_population))
-                population.save()
-
-            if form.cleaned_data['generate_rumours']:
-                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Rumour')
-
-                for i in range(0, random.randint(1, randomizer_attribute.max_options_to_use)):
-                    option = get_random_attribute_raw(thing.thing_type, randomizer_attribute.name)
-                    if option:
-                        random_attribute = RandomAttribute(thing=thing, text=option)
-                        random_attribute.save()
+            thing = save_new_location(campaign=campaign, form_data=form.cleaned_data)
 
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
@@ -697,29 +231,11 @@ def create_new_location(request):
 
     form.refresh_fields()
 
-    all_attributes = RandomizerAttribute.objects.filter(thing_type__name='Location')
-    allow_random = []
-    allow_random_by_category = []
-    for attr in all_attributes:
-        if attr.concatenate_results or len(RandomizerAttributeCategory.objects.filter(attribute=attr)) == 0:
-            allow_random.append(attr.name.lower())
-        else:
-            allow_random_by_category.append(attr.name.lower())
-    randomizer_categories = []
-    for attribute in allow_random_by_category:
-        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='Location', name__iexact=attribute)
-        randomizer_categories.append({
-            'field_name': attribute,
-            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute, show=True).order_by('name')]
-        })
-
     context = {
         'thing_form': form,
-        'thing_type': 'Location',
-        'allow_random': allow_random,
-        'allow_random_by_category': allow_random_by_category,
-        'randomizer_categories': randomizer_categories
+        'thing_type': 'Location'
     }
+    context.update(get_randomization_options_for_new_thing(thing_type=ThingType.objects.get(name='Location')))
     return render(request, 'campaign/new_thing.html', build_context(context))
 
 
@@ -728,37 +244,7 @@ def create_new_faction(request):
     if request.method == 'POST':
         form = NewFactionForm(request.POST)
         if form.is_valid():
-            thing = Thing(campaign=campaign, name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='Faction'))
-            thing.save()
-
-            for child in form.cleaned_data['npcs']:
-                thing.children.add(child)
-            thing.save()
-
-            new_parent = form.cleaned_data['location']
-            if new_parent:
-                new_parent.children.add(thing)
-                new_parent.save()
-
-            if form.cleaned_data['leader']:
-                leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form.cleaned_data['leader'])
-                leader.save()
-                leader_thing = Thing.objects.get(campaign=campaign, thing_type__name='NPC', name=form.cleaned_data['leader'])
-                if not leader_thing in thing.children.all():
-                    thing.children.add(leader_thing)
-                    thing.save()
-
-            if form.cleaned_data['attitude']:
-                attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='Faction'), value=form.cleaned_data['attitude'])
-                attitude.save()
-
-            if form.cleaned_data['power']:
-                power = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Power'), value=form.cleaned_data['power'])
-                power.save()
-
-            if form.cleaned_data['reach']:
-                reach = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Reach'), value=form.cleaned_data['reach'])
-                reach.save()
+            thing = save_new_faction(campaign=campaign, form_data=form.cleaned_data)
 
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
@@ -766,29 +252,11 @@ def create_new_faction(request):
 
     form.refresh_fields()
 
-    all_attributes = RandomizerAttribute.objects.filter(thing_type__name='Faction')
-    allow_random = []
-    allow_random_by_category = []
-    for attr in all_attributes:
-        if attr.concatenate_results or len(RandomizerAttributeCategory.objects.filter(attribute=attr)) == 0:
-            allow_random.append(attr.name.lower())
-        else:
-            allow_random_by_category.append(attr.name.lower())
-    randomizer_categories = []
-    for attribute in allow_random_by_category:
-        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='Faction', name__iexact=attribute)
-        randomizer_categories.append({
-            'field_name': attribute,
-            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute, show=True).order_by('name')]
-        })
-
     context = {
         'thing_form': form,
-        'thing_type': 'Faction',
-        'allow_random': allow_random,
-        'allow_random_by_category': allow_random_by_category,
-        'randomizer_categories': randomizer_categories
+        'thing_type': 'Faction'
     }
+    context.update(get_randomization_options_for_new_thing(thing_type=ThingType.objects.get(name='Faction')))
     return render(request, 'campaign/new_thing.html', build_context(context))
 
 
@@ -797,41 +265,7 @@ def create_new_npc(request):
     if request.method == 'POST':
         form = NewNpcForm(request.POST)
         if form.is_valid():
-            thing = Thing(campaign=campaign, name=form.cleaned_data['name'], description=form.cleaned_data['description'], thing_type=ThingType.objects.get(name='NPC'))
-            thing.save()
-
-            new_parents = []
-            if form.cleaned_data['location']:
-                new_parents.append(form.cleaned_data['location'])
-            new_parents.extend(form.cleaned_data['factions'])
-            for new_parent in new_parents:
-                new_parent.children.add(thing)
-                new_parent.save()
-
-            if form.cleaned_data['race']:
-                race = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Race'), value=form.cleaned_data['race'])
-                race.save()
-
-            if form.cleaned_data['attitude']:
-                attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='NPC'), value=form.cleaned_data['attitude'])
-                attitude.save()
-
-            if form.cleaned_data['occupation']:
-                occupation = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Occupation'), value=form.cleaned_data['occupation'])
-                occupation.save()
-
-            if form.cleaned_data['link']:
-                link = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Link'), value=form.cleaned_data['link'])
-                link.save()
-
-            if form.cleaned_data['generate_hooks']:
-                randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name='Hook')
-
-                for i in range(0, random.randint(1, randomizer_attribute.max_options_to_use)):
-                    option = get_random_attribute_raw(thing.thing_type, randomizer_attribute.name)
-                    if option:
-                        random_attribute = RandomAttribute(thing=thing, text=option)
-                        random_attribute.save()
+            thing = save_new_npc(campaign=campaign, form_data=form.cleaned_data)
 
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
@@ -839,28 +273,11 @@ def create_new_npc(request):
 
     form.refresh_fields()
 
-    all_attributes = RandomizerAttribute.objects.filter(thing_type__name='NPC')
-    allow_random = []
-    allow_random_by_category = []
-    for attr in all_attributes:
-        if attr.concatenate_results or len(RandomizerAttributeCategory.objects.filter(attribute=attr)) == 0:
-            allow_random.append(attr.name.lower())
-        else:
-            allow_random_by_category.append(attr.name.lower())
-    randomizer_categories = []
-    for attribute in allow_random_by_category:
-        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name='NPC', name__iexact=attribute)
-        randomizer_categories.append({
-            'field_name': attribute,
-            'categories': [o.name for o in RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute, show=True).order_by('name')]
-        })
     context = {
         'thing_form': form,
-        'thing_type': 'NPC',
-        'allow_random': allow_random,
-        'allow_random_by_category': allow_random_by_category,
-        'randomizer_categories': randomizer_categories
+        'thing_type': 'NPC'
     }
+    context.update(get_randomization_options_for_new_thing(thing_type=ThingType.objects.get(name='NPC')))
     return render(request, 'campaign/new_thing.html', build_context(context))
 
 
@@ -927,67 +344,10 @@ def edit_random_encounters(request, name, type_name):
 
 def randomize_name(request, thing_type_name, name):
     campaign = Campaign.objects.get(is_active=True)
-    thing_type = get_object_or_404(ThingType, name__iexact=thing_type_name)
-    thing = get_object_or_404(Thing, campaign=campaign, name__iexact=name)
+    thing = get_object_or_404(Thing, thing_type__name=thing_type_name, campaign=campaign, name__iexact=name)
 
-    name_pieces = name.split(' ')
-    try:
-        name_randomizer = AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing)
-    except AttributeValue.DoesNotExist:
-        name_randomizer = None
+    randomize_name_for_thing(campaign=campaign, name=name, thing=thing)
 
-    if name_randomizer:
-        thing.name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing).value)
-        new_name_pieces = thing.name.split(' ')
-        thing.description = thing.description.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-        thing.save()
-
-        print('Regenerating name for {0}: {1}'.format(name, thing.name))
-        if thing_type.name == 'NPC':
-            try:
-                faction = Thing.objects.get(campaign=campaign, thing_type__name='Faction', children=thing)
-                try:
-                    leader = AttributeValue.objects.get(attribute__name='Leader', thing=faction)
-                    leader.value = leader.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-                    leader.save()
-                    print('Updated leader attribute of {0}: {1}'.format(faction.name, leader.value))
-                except AttributeValue.DoesNotExist:
-                    pass
-            except Thing.DoesNotExist:
-                pass
-            try:
-                location = Thing.objects.get(campaign=campaign, thing_type__name='Location', children=thing)
-                try:
-                    ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=location)
-                    ruler.value = ruler.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-                    ruler.save()
-                    print('Updated ruler attribute of {0}: {1}'.format(location.name, ruler.value))
-                except AttributeValue.DoesNotExist:
-                    pass
-            except Thing.DoesNotExist:
-                pass
-        elif thing_type.name == 'Location':
-            try:
-                ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=thing)
-                npc = Thing.objects.get(thing_type__name='NPC', name=ruler.value)
-                npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
-                npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-                npc_occupation.save()
-                print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
-            except AttributeValue.DoesNotExist:
-                pass
-        elif thing_type.name == 'Faction':
-            try:
-                leader = AttributeValue.objects.get(attribute__name='Leader', thing=thing)
-                npc = Thing.objects.get(thing_type__name='NPC', name=leader.value)
-                npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
-                npc_occupation.value = npc_occupation.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
-                npc_occupation.save()
-                print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
-            except AttributeValue.DoesNotExist:
-                pass
-    else:
-        print('Cannot randomize name for {0}: no name randomizer set (likely not a generated object).'.format(thing.name))
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
 
@@ -1116,50 +476,6 @@ def get_random_attribute(request, thing_type, attribute):
         return JsonResponse({})
 
 
-def get_random_attribute_raw(thing_type, attribute):
-    campaign = get_object_or_404(Campaign, is_active=True)
-    try:
-        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name__iexact=thing_type, name__iexact=attribute)
-    except RandomizerAttribute.DoesNotExist:
-        print('Invalid randomizer attribute: {0}'.format(attribute))
-        raise Http404
-    if randomizer_attribute.concatenate_results:
-        categories = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute).order_by('name')
-        result = ''
-        if categories:
-            for category in categories:
-                result += '{0}:\n*-\n'.format(category.name)
-                for i in range(0, random.randint(1, category.max_options_to_use)):
-                    option = get_random_attribute_in_category_raw(thing_type, attribute, category.name)
-                    if option:
-                        result += '- {0}-\n'.format(option)
-                result += '-*\n'
-        if result:
-            return result
-        else:
-            return None
-    else:
-        try:
-            weight_preset = WeightPreset.objects.get(campaign=campaign, attribute_name__iexact=attribute, is_active=True)
-        except WeightPreset.DoesNotExist:
-            weight_preset = None
-        if weight_preset:
-            options = []
-            for option in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute):
-                try:
-                    weight = Weight.objects.get(weight_preset=weight_preset, name_to_weight__iexact=option.name).weight
-                except Weight.DoesNotExist:
-                    weight = 0
-                for i in range(0, weight):
-                    options.append(option.name)
-        else:
-            options = [o.name for o in RandomizerAttributeOption.objects.filter(attribute=randomizer_attribute)]
-        if options:
-            return random.choice(options)
-        else:
-            return None
-
-
 def get_random_attribute_in_category(request, thing_type, attribute, category):
     result = get_random_attribute_in_category_raw(thing_type, attribute, category)
     if result:
@@ -1168,78 +484,6 @@ def get_random_attribute_in_category(request, thing_type, attribute, category):
         })
     else:
         return JsonResponse({})
-
-
-def get_random_attribute_in_category_raw(thing_type, attribute, category):
-    try:
-        randomizer_attribute = RandomizerAttribute.objects.get(thing_type__name__iexact=thing_type, name__iexact=attribute)
-    except RandomizerAttribute.DoesNotExist:
-        print('Invalid randomizer attribute: {0}'.format(attribute))
-        raise Http404
-
-    try:
-        randomizer_attribute_category = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute,
-                                                                                name__iexact=category)
-        if randomizer_attribute_category.use_values_from.all():
-            randomizer_attribute_category = random.choice(randomizer_attribute_category.use_values_from.all())
-    except RandomizerAttributeCategory.DoesNotExist:
-        print('Invalid randomizer attribute category for {0}: {1}'.format(attribute, category))
-        raise Http404
-
-    randomizer_attribute_category_2 = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
-                                                                                 name__iexact=randomizer_attribute_category.name + '_2')
-    randomizer_attribute_category_synonym_first = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
-                                                                                             name__iexact=randomizer_attribute_category.name + '_synonym_first')
-    randomizer_attribute_category_synonym_last = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
-                                                                                             name__iexact=randomizer_attribute_category.name + '_synonym_last')
-
-    result = ''
-    result_and = ''
-
-    options = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category)]
-    options2 = []
-    if randomizer_attribute_category_2:
-        options2 = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category_2[0])]
-
-    if options:
-        result = random.choice(options)
-    if options2:
-        result2 = random.choice(options2)
-        if result2 == result2.lower():
-            result += result2
-        else:
-            result += ' ' + result2
-        if randomizer_attribute_category_2[0].can_combine_with_self:
-            result_and = random.choice(options2) + ' and ' + random.choice(options2)
-
-    if result and result_and:
-        if random.choice([0, 1]) == 0:
-            result = result_and
-
-    use_first_synonym = False
-    use_last_synonym = False
-    if randomizer_attribute_category_synonym_first and randomizer_attribute_category_synonym_last:
-        if random.choice([0, 1]) == 0:
-            use_first_synonym = True
-        else:
-            use_last_synonym = True
-    elif randomizer_attribute_category_synonym_first:
-        use_first_synonym = True
-    elif randomizer_attribute_category_synonym_last:
-        use_last_synonym = True
-    if use_first_synonym:
-        synonyms = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category_synonym_first[0])]
-        synonym = random.choice(synonyms)
-        result = synonym + ' ' + result
-    elif use_last_synonym:
-        synonyms = [o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category_synonym_last[0])]
-        synonym = random.choice(synonyms)
-        result += ' ' + synonym
-
-    if result:
-        return result
-    else:
-        return None
 
 
 def change_campaign(request, name):
@@ -1318,16 +562,8 @@ def generate_random_attributes_for_thing(request, name, attribute):
     thing = get_object_or_404(Thing, campaign=campaign, name__iexact=name)
     randomizer_attribute = get_object_or_404(RandomizerAttribute, thing_type=thing.thing_type, name__iexact=attribute)
 
-    generate_random_attributes_for_thing_raw(thing, randomizer_attribute)
+    generate_random_attributes_for_thing_raw(campaign=campaign, thing=thing, attribute=randomizer_attribute)
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
-
-
-def generate_random_attributes_for_thing_raw(thing, attribute):
-    for i in range(0, random.randint(1, attribute.max_options_to_use)):
-        option = get_random_attribute_raw(thing.thing_type, attribute.name)
-        if option:
-            random_attribute = RandomAttribute(thing=thing, text=option)
-            random_attribute.save()
 
 
 def add_random_attribute_for_thing(request, name):
@@ -1495,229 +731,6 @@ def generate_object_in_location(request, location_name, generator_name):
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
 
-def generate_thing(generator_object, campaign, parent_object=None):
-    print('Generating {0}...'.format(generator_object.name))
-    thing = Thing(thing_type=generator_object.thing_type, campaign=campaign)
-
-    fields_to_save = {
-        'thing': [],
-        'attribute_values': [],
-        'random_attributes': []
-    }
-
-    field_mappings = []
-    inherit_settings_from = generator_object
-    while inherit_settings_from is not None:
-        inherited_settings = GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=inherit_settings_from)
-        for inherited_setting in inherited_settings:
-            is_overridden = False
-            for field_mapping in field_mappings:
-                if field_mapping.field_name and field_mapping.field_name == inherited_setting.field_name \
-                        or field_mapping.randomizer_attribute \
-                                and field_mapping.randomizer_attribute == inherited_setting.randomizer_attribute \
-                        or field_mapping.randomizer_attribute_category and inherited_setting.randomizer_attribute_category \
-                                and field_mapping.randomizer_attribute_category.attribute == inherited_setting.randomizer_attribute_category.attribute:
-                    is_overridden = True
-                    break
-            if not is_overridden:
-                field_mappings.append(inherited_setting)
-        inherit_settings_from = inherit_settings_from.inherit_settings_from
-    for field_mapping in field_mappings:
-        if field_mapping.randomizer_attribute:
-            if field_mapping.randomizer_attribute.category_parameter:
-                parameter = get_random_attribute_raw(generator_object.thing_type, field_mapping.randomizer_attribute.category_parameter.name)
-                attribute = Attribute.objects.get(thing_type=generator_object.thing_type, name=field_mapping.randomizer_attribute.category_parameter.name)
-                fields_to_save['attribute_values'].append({
-                    'attribute': attribute,
-                    'value': parameter
-                })
-                value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
-                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
-                    print('Tried to use {0} but was in use'.format(value))
-                    value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
-            else:
-                value = get_random_attribute_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
-                while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
-                    print('Tried to use {0} but was in use'.format(value))
-                    value = get_random_attribute_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
-        else:
-            value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
-            while field_mapping.randomizer_attribute_category.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
-                print('Tried to use {0} but was in use'.format(value))
-                value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
-
-        if field_mapping.field_name:
-            fields_to_save['thing'].append({
-                'name': field_mapping.field_name,
-                'value': value
-            })
-        elif field_mapping.randomizer_attribute:
-            if field_mapping.randomizer_attribute.can_randomize_later:
-                fields_to_save['random_attributes'].append(field_mapping.randomizer_attribute)
-            else:
-                attribute = Attribute.objects.get(thing_type=generator_object.thing_type, name=field_mapping.randomizer_attribute.name)
-                if value:
-                    fields_to_save['attribute_values'].append({
-                        'attribute': attribute,
-                        'value': value
-                    })
-        elif field_mapping.randomizer_attribute_category:
-            attribute = Attribute.objects.get(thing_type=generator_object.thing_type, name=field_mapping.randomizer_attribute_category.attribute.name)
-            if value:
-                fields_to_save['attribute_values'].append({
-                    'attribute': attribute,
-                    'value': value
-                })
-
-    for field in fields_to_save['thing']:
-        if field['value']:
-            var_search = re.findall(VARIABLE_REGEX, field['value'])
-            if var_search:
-                for variable in var_search:
-                    if '.' in variable:
-                        parts = variable.split('.')
-                        if parts[0] == 'parent' and parent_object:
-                            try:
-                                parent_value = getattr(parent_object, parts[1])
-                            except AttributeError:
-                                parent_value = AttributeValue.objects.get(attribute__name__iexact=parts[1], thing=parent_object).value
-                            field['value'] = re.sub(r'\$\{' + variable + '\}', parent_value, field['value'])
-                    else:
-                        for thing_field in fields_to_save['thing']:
-                            if thing_field['name'] == variable:
-                                field['value'] = re.sub(r'\$\{' + variable + '\}', thing_field['value'], field['value'])
-                                break
-                        for thing_field in fields_to_save['attribute_values']:
-                            if thing_field['attribute'].name.lower() == variable.lower():
-                                field['value'] = re.sub(r'\$\{' + variable + '\}', thing_field['value'], field['value'])
-                                break
-            setattr(thing, field['name'], field['value'])
-
-    try:
-        if thing.name:
-            thing.save()
-        else:
-            print('Could not save {0}: likely a configuration error. Are all variables populated?'.format(fields_to_save))
-            return None
-    except IntegrityError:
-        print('Failed to save {0}: already exists.'.format(thing.name))
-        return None
-
-    for attribute_value_data in fields_to_save['attribute_values']:
-        var_search = re.search(VARIABLE_REGEX, attribute_value_data['value'])
-        if var_search:
-            variable = var_search.group(1)
-            if '.' in variable:
-                parts = variable.split('.')
-                if parts[0] == 'parent' and parent_object:
-                    try:
-                        parent_value = getattr(parent_object, parts[1])
-                    except AttributeError:
-                        parent_value = AttributeValue.objects.get(attribute__name__iexact=parts[1], thing=parent_object).value
-                    attribute_value_data['value'] = re.sub(r'\$\{.+\}', parent_value, attribute_value_data['value'])
-        attribute_value = AttributeValue(thing=thing, attribute=attribute_value_data['attribute'], value=attribute_value_data['value'])
-        attribute_value.save()
-
-    name_randomizer_attribute = Attribute.objects.get(thing_type=thing.thing_type, name='Name Randomizer')
-    name_randomizer = AttributeValue(thing=thing, attribute=name_randomizer_attribute)
-    if thing.thing_type.name == 'NPC':
-        name_randomizer.value = AttributeValue.objects.get(thing=thing, attribute__name='Race').value
-    elif thing.thing_type.name == 'Faction' or thing.thing_type.name == 'Location':
-        name_randomizer.value = generator_object.name
-    name_randomizer.save()
-
-    for attribute in fields_to_save['random_attributes']:
-        randomizer_attribute = RandomizerAttribute.objects.get(thing_type=thing.thing_type, name__iexact=attribute.name)
-        generate_random_attributes_for_thing_raw(thing, randomizer_attribute)
-
-    children = GeneratorObjectContains.objects.filter(generator_object=generator_object)
-    for child in children:
-        for i in range(0, random.randint(child.min_objects, child.max_objects)):
-            child_object = generate_thing(child.contained_object, campaign, thing)
-            if not child_object:
-                continue
-            print('Adding {0} to {1}...'.format(child_object.name, thing.name))
-            thing.children.add(child_object)
-            thing.save()
-            if thing.thing_type.name == 'Location':
-                for child_faction in thing.children.filter(thing_type__name='Faction'):
-                    for faction_npc in child_faction.children.filter(thing_type__name='NPC'):
-                        thing.children.add(faction_npc)
-                        thing.save()
-            attribute_for_container = child.contained_object.attribute_for_container
-            inherit_settings_from = child.contained_object.inherit_settings_from
-            while not attribute_for_container and inherit_settings_from:
-                attribute_for_container = inherit_settings_from.attribute_for_container
-                inherit_settings_from = inherit_settings_from.inherit_settings_from
-            if attribute_for_container:
-                print('Setting {0} for {1} to {2}...'.format(attribute_for_container, thing.name, child_object.name))
-                attribute = Attribute.objects.get(thing_type=thing.thing_type, name__iexact=attribute_for_container)
-                attribute_value = AttributeValue(thing=thing, attribute=attribute, value=child_object.name)
-                attribute_value.save()
-
-                var_search = re.search(VARIABLE_REGEX, thing.name)
-                if var_search:
-                    variable = var_search.group(1)
-                    if variable == attribute_for_container:
-                        new_name = re.sub(r'\$\{.+\}', child_object.name, thing.name)
-                        print('Changing {0} to {1}'.format(thing.name, new_name))
-                        thing.name = new_name
-                        thing.save()
-
-    return thing
-
-
-def save_containers(generator_object, container_text):
-    for container in container_text.split('\n'):
-        container = container.strip()
-        contains_search = re.search(CONTAINS_REGEX, container)
-        if contains_search:
-            min = contains_search.group(2) or 1
-            max = contains_search.group(4) or 1
-            thing_type_name = contains_search.group(6)
-            contained_name = contains_search.group(7)
-            contained_object = GeneratorObject.objects.get(thing_type__name__iexact=thing_type_name,
-                                                           name__iexact=contained_name)
-            object_contains = GeneratorObjectContains(generator_object=generator_object,
-                                                      contained_object=contained_object,
-                                                      min_objects=min,
-                                                      max_objects=max)
-            object_contains.save()
-
-
-def save_mappings(generator_object, mapping_text):
-    for mapping in mapping_text.split('\n'):
-        mapping = mapping.strip()
-        mapping_search = re.search(MAPPING_REGEX, mapping)
-        if mapping_search:
-            field_name = mapping_search.group(2)
-            attribute_name = mapping_search.group(3)
-            category_name = mapping_search.group(5)
-
-            attribute = None
-            category = None
-            if attribute_name:
-                attribute = RandomizerAttribute.objects.get(thing_type=generator_object.thing_type,
-                                                            name__iexact=attribute_name)
-                if category_name:
-                    category = RandomizerAttributeCategory.objects.get(attribute=attribute,
-                                                                       name__iexact=category_name)
-            if category:
-                generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
-                                                                                     field_name=field_name,
-                                                                                     randomizer_attribute_category=category)
-                generator_object_mapping.save()
-            elif attribute:
-                generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
-                                                                                     field_name=field_name,
-                                                                                     randomizer_attribute=attribute)
-                generator_object_mapping.save()
-            else:
-                generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
-                                                                                     field_name=field_name)
-                generator_object_mapping.save()
-
-
 def new_generator_object(request, thing_type_name):
     thing_type = get_object_or_404(ThingType, name=thing_type_name)
 
@@ -1725,13 +738,7 @@ def new_generator_object(request, thing_type_name):
         form = GeneratorObjectForm(request.POST)
         form.refresh_fields(thing_type)
         if form.is_valid():
-            generator_object = GeneratorObject(name=form.cleaned_data['name'], thing_type=thing_type,
-                                               inherit_settings_from=form.cleaned_data['inherit_settings_from'],
-                                               attribute_for_container=form.cleaned_data['attribute_for_container'])
-            generator_object.save()
-
-            save_containers(generator_object, form.cleaned_data['contains'])
-            save_mappings(generator_object, form.cleaned_data['mappings'])
+            generator_object = save_new_generator(thing_type=thing_type, form_data=form.cleaned_data)
             return HttpResponseRedirect(reverse('campaign:list_everything'))
         else:
             print(form.errors)
@@ -1755,10 +762,7 @@ def edit_generator_object(request, name):
         form = GeneratorObjectForm(request.POST)
         form.refresh_fields(generator_object.thing_type)
         if form.is_valid():
-            GeneratorObjectContains.objects.filter(generator_object=generator_object).delete()
-            GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=generator_object).delete()
-            save_containers(generator_object, form.cleaned_data['contains'])
-            save_mappings(generator_object, form.cleaned_data['mappings'])
+            generator_object = edit_generator(generator_object, form.cleaned_data)
             return HttpResponseRedirect(reverse('campaign:list_everything'))
         else:
             print(form.errors)
