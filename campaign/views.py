@@ -6,7 +6,7 @@ from .export_utils import get_campaign_json, get_settings_json, save_campaign, s
 from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
 from .randomizers import get_randomization_options_for_new_thing, get_random_attribute_in_category_raw, get_random_attribute_raw, generate_random_attributes_for_thing_raw
-from .thing_generator import generate_thing, save_new_generator, edit_generator
+from .generator_utils import generate_thing, save_new_generator, edit_generator
 from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, randomize_name_for_thing
 
 
@@ -769,8 +769,13 @@ def edit_generator_object(request, name):
     else:
         contains = ''
         for container in GeneratorObjectContains.objects.filter(generator_object=generator_object):
-            if container.min_objects == 1 and container.max_objects == 1:
-                contains += '{0}.{1}\n'.format(container.contained_object.thing_type.name, container.contained_object.name)
+            if container.percent_chance_for_one:
+                contains += '{0}% {1}.{2}\n'.format(container.percent_chance_for_one,
+                                                    container.contained_object.thing_type.name,
+                                                    container.contained_object.name)
+            elif container.min_objects == 1 and container.max_objects == 1:
+                contains += '{0}.{1}\n'.format(container.contained_object.thing_type.name,
+                                               container.contained_object.name)
             else:
                 contains += '{0}-{1} {2}.{3}\n'.format(container.min_objects, container.max_objects,
                                                      container.contained_object.thing_type.name,

@@ -6,7 +6,7 @@ from django.db import IntegrityError
 from .models import Attribute, AttributeValue, GeneratorObjectContains, Thing, RandomizerAttribute, GeneratorObjectFieldToRandomizerAttribute, GeneratorObject, RandomizerAttributeCategory
 from .randomizers import get_random_attribute_raw, get_random_attribute_in_category_raw, generate_random_attributes_for_thing_raw
 
-CONTAINS_REGEX = r'^(([\d]+)(-(\d+))? )?(([\w ]+)\.([\w ]+))$'
+CONTAINS_REGEX = r'^((\d+)((-(\d+))|%)? )?(([\w]+)\.(.+))$'
 MAPPING_REGEX = r'^((\w+): )?([\w ]+)(\.([\w ]+))?$'
 VARIABLE_REGEX = r'\$\{([^\}]+)\}'
 
@@ -148,7 +148,14 @@ def generate_thing(generator_object, campaign, parent_object=None):
 
     children = GeneratorObjectContains.objects.filter(generator_object=generator_object)
     for child in children:
-        for i in range(0, random.randint(child.min_objects, child.max_objects)):
+        if child.percent_chance_for_one:
+            if random.randint(1, 100) <= child.percent_chance_for_one:
+                num_to_generate = 1
+            else:
+                num_to_generate = 0
+        else:
+            num_to_generate = random.randint(child.min_objects, child.max_objects)
+        for i in range(0, num_to_generate):
             child_object = generate_thing(child.contained_object, campaign, thing)
             if not child_object:
                 continue
@@ -189,13 +196,22 @@ def save_containers(generator_object, container_text):
         contains_search = re.search(CONTAINS_REGEX, container)
         if contains_search:
             min = contains_search.group(2) or 1
-            max = contains_search.group(4) or 1
-            thing_type_name = contains_search.group(6)
-            contained_name = contains_search.group(7)
+            max = contains_search.group(5) or 1
+            if contains_search.group(3) == '%':
+                percent_chance_to_contain_one = contains_search.group(2)
+                min = 0
+                max = 0
+
+            else:
+                percent_chance_to_contain_one = 0
+            thing_type_name = contains_search.group(7)
+            contained_name = contains_search.group(8)
             contained_object = GeneratorObject.objects.get(thing_type__name__iexact=thing_type_name,
                                                            name__iexact=contained_name)
+
             object_contains = GeneratorObjectContains(generator_object=generator_object,
                                                       contained_object=contained_object,
+                                                      percent_chance_for_one=percent_chance_to_contain_one,
                                                       min_objects=min,
                                                       max_objects=max)
             object_contains.save()

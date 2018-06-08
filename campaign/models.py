@@ -186,11 +186,16 @@ class GeneratorObject(models.Model):
 class GeneratorObjectContains(models.Model):
     generator_object = models.ForeignKey(GeneratorObject, on_delete=models.CASCADE, related_name='generator_object')
     contained_object = models.ForeignKey(GeneratorObject, on_delete=models.CASCADE, related_name='contained_object')
+    percent_chance_for_one = models.IntegerField(default=0)
     min_objects = models.IntegerField(default=1)
     max_objects = models.IntegerField(default=5)
 
     def __str__(self):
-        return '{0} contains {1}-{2} {3}s'.format(self.generator_object.name, self.min_objects, self.max_objects, self.contained_object.name)
+        if self.percent_chance_for_one:
+            display_string = '{0} has a {1}% chance to contain 1 {2}'.format(self.generator_object.name, self.percent_chance_for_one, self.contained_object.name)
+        else:
+            display_string = '{0} contains {1}-{2} {3}s'.format(self.generator_object.name, self.min_objects, self.max_objects, self.contained_object.name)
+        return display_string
 
 
 class GeneratorObjectFieldToRandomizerAttribute(models.Model):
