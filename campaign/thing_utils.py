@@ -1,9 +1,14 @@
+import logging
 import random
 import re
 from operator import methodcaller
 
+from .generator_utils import VARIABLE_REGEX
 from .models import Thing, ThingType, RandomEncounter, RandomizerAttribute, Attribute, UsefulLink, RandomAttribute, AttributeValue, RandomEncounterType
 from .randomizers import get_random_attribute_raw, get_random_attribute_in_category_raw
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_js_class(name, value):
@@ -309,6 +314,30 @@ def save_new_npc(campaign, form_data):
     return thing
 
 
+def replace_variables_in_name(thing, name):
+    var_search = re.findall(VARIABLE_REGEX, name)
+    if var_search:
+        for variable in var_search:
+            if '.' in variable:
+                parts = variable.split('.')
+                if parts[0] == 'parent':
+                    try:
+                        parent_object = Thing.objects.get(campaign=thing.campaign, thing_type__name='Location', children=thing)
+                    except Thing.DoesNotExist:
+                        parent_object = None
+                    if parent_object:
+                        try:
+                            parent_value = getattr(parent_object, parts[1])
+                        except AttributeError:
+                            parent_value = AttributeValue.objects.get(attribute__name__iexact=parts[1], thing=parent_object).value
+                        return re.sub(r'\$\{' + variable + '\}', parent_value, name)
+            else:
+                for attribute_value in AttributeValue.objects.filter(thing=thing):
+                    if attribute_value.attribute.name.lower() == variable:
+                        return re.sub(r'\$\{' + variable + '\}', attribute_value.value, name)
+    return name
+
+
 def randomize_name_for_thing(campaign, name, thing):
     name_pieces = name.split(' ')
     try:
@@ -317,14 +346,25 @@ def randomize_name_for_thing(campaign, name, thing):
         name_randomizer = None
 
     if name_randomizer:
-        thing.name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing).value)
+        new_name = None
+        while not new_name or Thing.objects.filter(name__iexact=new_name):
+            if new_name:
+                logger.debug('Tried randomizing {0} to {1} but it was in use.'.format(thing.name, new_name))
+            else:
+                logger.debug('Getting new name for {0}.'.format(thing.name))
+            raw_name = get_random_attribute_in_category_raw(thing.thing_type, 'name', AttributeValue.objects.get(attribute__name='Name Randomizer', thing=thing).value)
+            logger.debug('Got {0}'.format(raw_name))
+            new_name = replace_variables_in_name(thing, raw_name)
+
+        thing.name = new_name
+
         new_name_pieces = thing.name.split(' ')
         thing.description = thing.description.replace(name_pieces[0], new_name_pieces[0])
         if len(name_pieces) > 1:
             thing.description.replace(name_pieces[1], new_name_pieces[1])
         thing.save()
 
-        print('Regenerating name for {0}: {1}'.format(name, thing.name))
+        logger.info('Regenerated name for {0}: {1}'.format(name, thing.name))
         if thing.thing_type.name == 'NPC':
             try:
                 faction = Thing.objects.get(campaign=campaign, thing_type__name='Faction', children=thing)
@@ -332,7 +372,7 @@ def randomize_name_for_thing(campaign, name, thing):
                     leader = AttributeValue.objects.get(attribute__name='Leader', thing=faction)
                     leader.value = leader.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
                     leader.save()
-                    print('Updated leader attribute of {0}: {1}'.format(faction.name, leader.value))
+                    logger.info('Updated leader attribute of {0}: {1}'.format(faction.name, leader.value))
                 except AttributeValue.DoesNotExist:
                     pass
             except Thing.DoesNotExist:
@@ -343,7 +383,7 @@ def randomize_name_for_thing(campaign, name, thing):
                     ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=location)
                     ruler.value = ruler.value.replace(name_pieces[0], new_name_pieces[0]).replace(name_pieces[1], new_name_pieces[1])
                     ruler.save()
-                    print('Updated ruler attribute of {0}: {1}'.format(location.name, ruler.value))
+                    logger.info('Updated ruler attribute of {0}: {1}'.format(location.name, ruler.value))
                 except AttributeValue.DoesNotExist:
                     pass
             except Thing.DoesNotExist:
@@ -357,7 +397,7 @@ def randomize_name_for_thing(campaign, name, thing):
                 if len(name_pieces) > 1:
                     npc_occupation.value.replace(name_pieces[1], new_name_pieces[1])
                 npc_occupation.save()
-                print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
+                logger.info('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
             except AttributeValue.DoesNotExist:
                 pass
         elif thing.thing_type.name == 'Faction':
@@ -369,8 +409,8 @@ def randomize_name_for_thing(campaign, name, thing):
                 if len(name_pieces) > 1:
                     npc_occupation.value.replace(name_pieces[1], new_name_pieces[1])
                 npc_occupation.save()
-                print('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
+                logger.info('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
             except AttributeValue.DoesNotExist:
                 pass
     else:
-        print('Cannot randomize name for {0}: no name randomizer set (likely not a generated object).'.format(thing.name))
+        logger.info('Cannot randomize name for {0}: no name randomizer set (likely not a generated object).'.format(thing.name))

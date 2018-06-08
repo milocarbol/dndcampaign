@@ -1,3 +1,5 @@
+import logging
+
 from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -9,6 +11,8 @@ from .randomizers import get_randomization_options_for_new_thing, get_random_att
 from .generator_utils import generate_thing, save_new_generator, edit_generator
 from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, randomize_name_for_thing
 
+
+logger = logging.getLogger(__name__)
 
 def build_context(context):
     campaign = Campaign.objects.get(is_active=True)
@@ -125,7 +129,7 @@ def import_campaign(request):
             save_campaign(campaign=campaign, json_file=request.FILES['file'].read().decode('UTF-8'))
             return HttpResponseRedirect(reverse('campaign:list_everything'))
         else:
-            print(form.errors)
+            logger.info(form.errors)
     else:
         form = UploadFileForm()
     context = {
@@ -150,7 +154,7 @@ def import_settings(request):
             save_settings(json_file=request.FILES['file'].read().decode('UTF-8'))
             return HttpResponseRedirect(reverse('campaign:list_everything'))
         else:
-            print(form.errors)
+            logger.info(form.errors)
     else:
         form = UploadFileForm()
     context = {
@@ -620,7 +624,7 @@ def delete_random_attribute_for_thing(request, name, random_attribute_id):
     try:
         RandomAttribute.objects.get(thing=thing, pk=random_attribute_id).delete()
     except RandomAttribute.DoesNotExist:
-        print('Tried to delete a nonexistant random attribute from {0}.'.format(thing.name))
+        logger.warn('Tried to delete a nonexistant random attribute from {0}.'.format(thing.name))
 
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
@@ -741,7 +745,7 @@ def new_generator_object(request, thing_type_name):
             generator_object = save_new_generator(thing_type=thing_type, form_data=form.cleaned_data)
             return HttpResponseRedirect(reverse('campaign:list_everything'))
         else:
-            print(form.errors)
+            logger.info(form.errors)
     else:
         form = GeneratorObjectForm()
         form.refresh_fields(thing_type)
@@ -765,7 +769,7 @@ def edit_generator_object(request, name):
             generator_object = edit_generator(generator_object, form.cleaned_data)
             return HttpResponseRedirect(reverse('campaign:list_everything'))
         else:
-            print(form.errors)
+            logger.info(form.errors)
     else:
         contains = ''
         for container in GeneratorObjectContains.objects.filter(generator_object=generator_object):

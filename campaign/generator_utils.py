@@ -1,3 +1,4 @@
+import logging
 import random
 import re
 
@@ -6,13 +7,17 @@ from django.db import IntegrityError
 from .models import Attribute, AttributeValue, GeneratorObjectContains, Thing, RandomizerAttribute, GeneratorObjectFieldToRandomizerAttribute, GeneratorObject, RandomizerAttributeCategory
 from .randomizers import get_random_attribute_raw, get_random_attribute_in_category_raw, generate_random_attributes_for_thing_raw
 
+
+logger = logging.getLogger(__name__)
+
+
 CONTAINS_REGEX = r'^((\d+)((-(\d+))|%)? )?(([\w]+)\.(.+))$'
 MAPPING_REGEX = r'^((\w+): )?([\w ]+)(\.([\w ]+))?$'
 VARIABLE_REGEX = r'\$\{([^\}]+)\}'
 
 
 def generate_thing(generator_object, campaign, parent_object=None):
-    print('Generating {0}...'.format(generator_object.name))
+    logger.info('Generating {0}...'.format(generator_object.name))
     thing = Thing(thing_type=generator_object.thing_type, campaign=campaign)
 
     fields_to_save = {
@@ -49,17 +54,17 @@ def generate_thing(generator_object, campaign, parent_object=None):
                 })
                 value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
                 while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
-                    print('Tried to use {0} but was in use'.format(value))
+                    logger.debug('Tried to use {0} but was in use'.format(value))
                     value = get_random_attribute_in_category_raw(thing_type=generator_object.thing_type, attribute=field_mapping.randomizer_attribute.name, category=parameter)
             else:
                 value = get_random_attribute_raw(campaign=campaign, thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
                 while field_mapping.randomizer_attribute.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
-                    print('Tried to use {0} but was in use'.format(value))
+                    logger.debug('Tried to use {0} but was in use'.format(value))
                     value = get_random_attribute_raw(campaign=campaign, thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute.name)
         else:
             value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
             while field_mapping.randomizer_attribute_category.must_be_unique and len(Thing.objects.filter(campaign=campaign, name=value)) > 0:
-                print('Tried to use {0} but was in use'.format(value))
+                logger.debug('Tried to use {0} but was in use'.format(value))
                 value = get_random_attribute_in_category_raw(thing_type=thing.thing_type, attribute=field_mapping.randomizer_attribute_category.attribute.name, category=field_mapping.randomizer_attribute_category.name)
 
         if field_mapping.field_name:
@@ -113,10 +118,10 @@ def generate_thing(generator_object, campaign, parent_object=None):
         if thing.name:
             thing.save()
         else:
-            print('Could not save {0}: likely a configuration error. Are all variables populated?'.format(fields_to_save))
+            logger.error('Could not save {0}: likely a configuration error. Are all variables populated?'.format(fields_to_save))
             return None
     except IntegrityError:
-        print('Failed to save {0}: already exists.'.format(thing.name))
+        logger.error('Failed to save {0}: already exists.'.format(thing.name))
         return None
 
     for attribute_value_data in fields_to_save['attribute_values']:
@@ -159,7 +164,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
             child_object = generate_thing(child.contained_object, campaign, thing)
             if not child_object:
                 continue
-            print('Adding {0} to {1}...'.format(child_object.name, thing.name))
+            logger.info('Adding {0} to {1}...'.format(child_object.name, thing.name))
             thing.children.add(child_object)
             thing.save()
             if thing.thing_type.name == 'Location':
@@ -173,7 +178,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
                 attribute_for_container = inherit_settings_from.attribute_for_container
                 inherit_settings_from = inherit_settings_from.inherit_settings_from
             if attribute_for_container:
-                print('Setting {0} for {1} to {2}...'.format(attribute_for_container, thing.name, child_object.name))
+                logger.info('Setting {0} for {1} to {2}...'.format(attribute_for_container, thing.name, child_object.name))
                 attribute = Attribute.objects.get(thing_type=thing.thing_type, name__iexact=attribute_for_container)
                 attribute_value = AttributeValue(thing=thing, attribute=attribute, value=child_object.name)
                 attribute_value.save()
@@ -183,7 +188,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     variable = var_search.group(1)
                     if variable == attribute_for_container:
                         new_name = re.sub(r'\$\{.+\}', child_object.name, thing.name)
-                        print('Changing {0} to {1}'.format(thing.name, new_name))
+                        logger.info('Changing {0} to {1}'.format(thing.name, new_name))
                         thing.name = new_name
                         thing.save()
 
