@@ -9,7 +9,7 @@ from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, Upl
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
 from .randomizers import get_randomization_options_for_new_thing, get_random_attribute_in_category_raw, get_random_attribute_raw, generate_random_attributes_for_thing_raw
 from .generator_utils import generate_thing, save_new_generator, edit_generator
-from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, randomize_name_for_thing
+from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, randomize_name_for_thing, update_thing_name_and_all_related
 
 
 logger = logging.getLogger(__name__)
@@ -350,7 +350,7 @@ def randomize_name(request, thing_type_name, name):
     campaign = Campaign.objects.get(is_active=True)
     thing = get_object_or_404(Thing, thing_type__name=thing_type_name, campaign=campaign, name__iexact=name)
 
-    randomize_name_for_thing(campaign=campaign, name=name, thing=thing)
+    randomize_name_for_thing(thing=thing)
 
     return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
 
@@ -362,8 +362,8 @@ def edit_name(request, name):
     if request.method == 'POST':
         form = ChangeRequiredTextAttributeForm(request.POST)
         if form.is_valid():
-            thing.name = form.cleaned_data['value']
-            thing.save()
+            new_name = form.cleaned_data['value']
+            update_thing_name_and_all_related(thing, new_name)
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
         form = ChangeRequiredTextAttributeForm({'value': thing.name})
