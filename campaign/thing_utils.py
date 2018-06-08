@@ -372,7 +372,7 @@ def update_value_in_string(string, old_value, new_value):
     return new_string
 
 
-def update_thing_name_and_all_related(thing, new_name):
+def update_thing_name_and_all_related(thing, new_name, check_parents=True):
     name = thing.name
 
     thing.name = new_name
@@ -404,8 +404,10 @@ def update_thing_name_and_all_related(thing, new_name):
             pass
         try:
             parent_with_name = Thing.objects.get(campaign=thing.campaign, name__icontains=name, children=thing)
-            parent_with_name.name = update_value_in_string(parent_with_name.name, name, new_name)
-            parent_with_name.save()
+            parent_new_name = update_value_in_string(parent_with_name.name, name, new_name)
+            old_name = parent_with_name.name
+            update_thing_name_and_all_related(parent_with_name, parent_new_name, False)
+            logger.info('Updated name of {0}: {1}'.format(old_name, parent_with_name.name))
         except Thing.DoesNotExist:
             pass
     elif thing.thing_type.name == 'Location':
@@ -419,8 +421,10 @@ def update_thing_name_and_all_related(thing, new_name):
         except AttributeValue.DoesNotExist:
             pass
         for child_with_name in thing.children.filter(name__icontains=name):
-            child_with_name.name = update_value_in_string(child_with_name.name, name, new_name)
-            child_with_name.save()
+            child_new_name = update_value_in_string(child_with_name.name, name, new_name)
+            old_name = child_with_name.name
+            update_thing_name_and_all_related(child_with_name, child_new_name, False)
+            logger.info('Updated name of {0}: {1}'.format(old_name, child_with_name.name))
     elif thing.thing_type.name == 'Faction':
         try:
             leader = AttributeValue.objects.get(attribute__name='Leader', thing=thing)

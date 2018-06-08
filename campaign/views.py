@@ -730,9 +730,12 @@ def generate_object_in_location(request, location_name, generator_name):
     campaign = get_object_or_404(Campaign, is_active=True)
     parent = get_object_or_404(Thing, thing_type__name='Location', name__iexact=location_name)
     thing = generate_thing(generator_object, campaign, parent)
-    parent.children.add(thing)
-    parent.save()
-    return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    if thing:
+        parent.children.add(thing)
+        parent.save()
+        return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        return HttpResponseRedirect(reverse('campaign:detail', args=(parent.name,)))
 
 
 def new_generator_object(request, thing_type_name):
