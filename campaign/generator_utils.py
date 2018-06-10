@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 CONTAINS_REGEX = r'^((\d+)((-(\d+))|%)? )?(([\w]+)\.(.+))$'
-MAPPING_REGEX = r'^((\w+): )?([\w ]+)(\.([\w ]+))?$'
+MAPPING_REGEX = r'^((\w+): )?([\w ]+)(\.(.+))?$'
 VARIABLE_REGEX = r'\$\{([^\}]+)\}'
 
 
@@ -41,7 +41,10 @@ def generate_thing(generator_object, campaign, parent_object=None):
                     is_overridden = True
                     break
             if not is_overridden:
+                logger.debug('Using randomizer mapping from {0}: {1}'.format(inherit_settings_from.name, inherited_setting))
                 field_mappings.append(inherited_setting)
+            else:
+                logger.debug('Not using randomizer mapping from {0}: {1} (overridden by child)'.format(inherit_settings_from.name, inherited_setting))
         inherit_settings_from = inherit_settings_from.inherit_settings_from
     for field_mapping in field_mappings:
         if field_mapping.randomizer_attribute:
@@ -197,6 +200,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
 
 def save_containers(generator_object, container_text):
     for container in container_text.split('\n'):
+        logger.debug('{0}: parsing {1}'.format(generator_object.name, container))
         container = container.strip()
         contains_search = re.search(CONTAINS_REGEX, container)
         if contains_search:
@@ -220,10 +224,14 @@ def save_containers(generator_object, container_text):
                                                       min_objects=min,
                                                       max_objects=max)
             object_contains.save()
+            logger.debug('{0}: Added container {1}'.format(generator_object.name, contained_object.name))
+        else:
+            logger.warn('{0}: Failed to parse {1}'.format(generator_object.name, container))
 
 
 def save_mappings(generator_object, mapping_text):
     for mapping in mapping_text.split('\n'):
+        logger.debug('{0}: parsing {1}'.format(generator_object.name, mapping))
         mapping = mapping.strip()
         mapping_search = re.search(MAPPING_REGEX, mapping)
         if mapping_search:
@@ -244,22 +252,36 @@ def save_mappings(generator_object, mapping_text):
                                                                                      field_name=field_name,
                                                                                      randomizer_attribute_category=category)
                 generator_object_mapping.save()
+                if field_name:
+                    logger.debug('{0}: Mapped {1} to {2}.{3}'.format(generator_object.name, field_name, attribute.name, category.name))
+                else:
+                    logger.debug('{0}: Added {1}.{2}'.format(generator_object.name, attribute.name, category.name))
             elif attribute:
                 generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
                                                                                      field_name=field_name,
                                                                                      randomizer_attribute=attribute)
                 generator_object_mapping.save()
+                if field_name:
+                    logger.debug('{0}: Mapped {1} to {2}'.format(generator_object.name, field_name, attribute.name))
+                else:
+                    logger.debug('{0}: Added {1}'.format(generator_object.name, attribute.name))
             else:
                 generator_object_mapping = GeneratorObjectFieldToRandomizerAttribute(generator_object=generator_object,
                                                                                      field_name=field_name)
                 generator_object_mapping.save()
+                logger.debug('{0}: Added {1}'.format(generator_object.name, field_name))
+        else:
+            logger.warn('{0}: Failed to parse {1}'.format(generator_object.name, mapping))
                 
                 
 def save_new_generator(thing_type, form_data):
     generator_object = GeneratorObject(name=form_data['name'], thing_type=thing_type,
-                                               inherit_settings_from=form_data['inherit_settings_from'],
-                                               attribute_for_container=form_data['attribute_for_container'])
+                                            inherit_settings_from=form_data['inherit_settings_from'],
+                                            attribute_for_container=form_data['attribute_for_container'])
     generator_object.save()
+    logger.info('Saved new generator {0}: name={1}, inherit_settings_from={2}, attribute_for_container={3}'.format(generator_object.name,
+                                                                                                                   generator_object.inherit_settings_from,
+                                                                                                                   generator_object.attribute_for_container))
 
     save_containers(generator_object, form_data['contains'])
     save_mappings(generator_object, form_data['mappings'])
@@ -268,8 +290,17 @@ def save_new_generator(thing_type, form_data):
 
 
 def edit_generator(generator_object, form_data):
+    generator_object.name = form_data['name']
+    generator_object.inherit_settings_from = form_data['inherit_settings_from']
+    generator_object.attribute_for_container = form_data['attribute_for_container']
+    generator_object.save()
+    logger.info('Updated generator {0}: inherit_settings_from={1}, attribute_for_container={2}'.format(generator_object.name,
+                                                                                                       generator_object.inherit_settings_from,
+                                                                                                       generator_object.attribute_for_container))
+
     GeneratorObjectContains.objects.filter(generator_object=generator_object).delete()
     GeneratorObjectFieldToRandomizerAttribute.objects.filter(generator_object=generator_object).delete()
+    logger.debug('Cleared containers and mappings for {0}'.format(generator_object.name))
     save_containers(generator_object, form_data['contains'])
     save_mappings(generator_object, form_data['mappings'])
     return generator_object

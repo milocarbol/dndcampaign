@@ -162,7 +162,7 @@ class SelectGeneratorObject(forms.Form):
     generator_object = forms.ModelChoiceField(label='Object', queryset=GeneratorObject.objects.all())
 
     def refresh_fields(self, thing_type):
-        self.fields['generator_object'].queryset = GeneratorObject.objects.filter(thing_type=thing_type)
+        self.fields['generator_object'].queryset = GeneratorObject.objects.filter(thing_type=thing_type).order_by('name')
 
 
 class SelectGeneratorObjectWithLocation(forms.Form):
@@ -181,7 +181,7 @@ class NewPreset(forms.Form):
     def refresh_fields(self):
         attributes = []
         for attribute in RandomizerAttribute.objects.all():
-            if not RandomizerAttributeCategory.objects.filter(attribute=attribute):
+            if not RandomizerAttributeCategory.objects.filter(attribute=attribute).order_by('name'):
                 attributes.append((attribute.name, '[{0}] {1}'.format(attribute.thing_type.name, attribute.name)))
         self.fields['attribute_name'].choices = attributes
 
@@ -190,7 +190,7 @@ class SelectPreset(forms.Form):
     preset = forms.ChoiceField(label='Preset', choices=[])
 
     def refresh_fields(self, attribute_name, campaign):
-        choices = [(p.name, p.name) for p in WeightPreset.objects.filter(attribute_name__iexact=attribute_name, campaign=campaign)]
+        choices = [(p.name, p.name) for p in WeightPreset.objects.filter(attribute_name__iexact=attribute_name, campaign=campaign).order_by('name')]
         self.fields['preset'].choices = choices
 
 
@@ -202,4 +202,4 @@ class GeneratorObjectForm(forms.Form):
     mappings = forms.CharField(label='Mappings', widget=forms.Textarea, required=False)
 
     def refresh_fields(self, thing_type):
-        self.fields['inherit_settings_from'].queryset = GeneratorObject.objects.filter(thing_type=thing_type)
+        self.fields['inherit_settings_from'].queryset = GeneratorObject.objects.filter(thing_type=thing_type).order_by('name')
