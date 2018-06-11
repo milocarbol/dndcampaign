@@ -1,0 +1,48 @@
+{% if thing.child_factions or thing.child_locations or thing.child_npcs %}
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                {% if thing.child_factions %}
+                    <th scope="col" class="text-center">Factions</th>
+                {% endif %}
+                {% if thing.child_locations %}
+                    <th scope="col" class="text-center">Points of Interest</th>
+                {% endif %}
+                {% if thing.child_npcs %}
+                    <th scope="col" class="text-center">Notable People</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                {% if thing.child_factions %}
+                    <td>
+                        <ul>
+                            {% for faction in thing.child_factions %}
+                                <li><a href="{% url 'campaign:detail' faction.name %}">{{ faction.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                {% endif %}
+                {% if thing.child_locations %}
+                    <td>
+                        <ul>
+                            {% for location in thing.child_locations %}
+                                <li><a href="{% url 'campaign:detail' location.name %}">{{ location.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                {% endif %}
+                {% if thing.child_npcs %}
+                    <td>
+                        <ul>
+                            {% for npc in thing.child_npcs %}
+                                <li><a href="{% url 'campaign:detail' npc.name %}">{{ npc.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                {% endif %}
+            </tr>
+        </tbody>
+    </table>
+{% endif %}

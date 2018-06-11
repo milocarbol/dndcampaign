@@ -15,7 +15,7 @@ def get_js_class(name, value):
     return re.sub(r'\W+', '-', '{0}-{1}'.format(name, value))
 
 
-def get_attributes_to_display(campaign, thing):
+def get_attributes_to_display(campaign, thing, include_location=True):
     attributes_to_display = []
     attribute_values = AttributeValue.objects.filter(thing=thing, attribute__display_in_summary=True).order_by('attribute__name')
     for attribute_value in attribute_values:
@@ -26,14 +26,15 @@ def get_attributes_to_display(campaign, thing):
             'js_class': get_js_class(attribute_value.attribute.name, attribute_value.value)
         })
 
-    parent_location = get_parent_location(campaign=campaign, thing=thing)
-    if parent_location:
-        attributes_to_display.append({
-            'name': 'Location',
-            'value': parent_location,
-            'can_link': True,
-            'js_class': get_js_class('Location', parent_location)
-        })
+    if include_location:
+        parent_location = get_parent_location(campaign=campaign, thing=thing)
+        if parent_location:
+            attributes_to_display.append({
+                'name': 'Location',
+                'value': parent_location,
+                'can_link': True,
+                'js_class': get_js_class('Location', parent_location)
+            })
     return attributes_to_display
 
 
@@ -45,45 +46,46 @@ def get_parent_location(campaign, thing):
         return parents[0].name
 
 
-def get_details(campaign, thing):
+def get_details(campaign, thing, get_child_detail_too=False, include_location=True):
     parent_locations = []
     parent_factions = []
     for parent in Thing.objects.filter(campaign=campaign, children=thing).order_by('name'):
         if parent.thing_type.name == 'Location':
-            parent_locations.append({
-                'name': parent.name,
-                'description': parent.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=parent)
-            })
+            parent_locations.append(get_details(campaign=campaign, thing=parent))
         elif parent.thing_type.name == 'Faction':
-            parent_factions.append({
-                'name': parent.name,
-                'description': parent.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=parent)
-            })
+            parent_factions.append(get_details(campaign=campaign, thing=parent))
 
     child_locations = []
     child_factions = []
     child_npcs = []
     for child in thing.children.order_by('name'):
         if child.thing_type.name == 'Location':
-            child_locations.append({
-                'name': child.name,
-                'description': child.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
-            })
+            if get_child_detail_too:
+                child_locations.append(get_details(campaign=campaign, thing=child, include_location=False))
+            else:
+                child_locations.append({
+                    'name': child.name,
+                    'description': child.description,
+                    'attributes': get_attributes_to_display(campaign=campaign, thing=child, include_location=False)
+                })
         elif child.thing_type.name == 'Faction':
-            child_factions.append({
-                'name': child.name,
-                'description': child.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
-            })
+            if get_child_detail_too:
+                child_factions.append(get_details(campaign=campaign, thing=child, include_location=False))
+            else:
+                child_factions.append({
+                    'name': child.name,
+                    'description': child.description,
+                    'attributes': get_attributes_to_display(campaign=campaign, thing=child, include_location=False)
+                })
         elif child.thing_type.name == 'NPC':
-            child_npcs.append({
-                'name': child.name,
-                'description': child.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=child)
-            })
+            if get_child_detail_too:
+                child_npcs.append(get_details(campaign=campaign, thing=child, include_location=False))
+            else:
+                child_npcs.append({
+                    'name': child.name,
+                    'description': child.description,
+                    'attributes': get_attributes_to_display(campaign=campaign, thing=child, include_location=False)
+                })
 
     encounter_types = [t.name for t in RandomEncounterType.objects.all()]
     encounter_types.sort()
@@ -108,7 +110,7 @@ def get_details(campaign, thing):
         'name': thing.name,
         'thing_type': thing.thing_type.name,
         'description': thing.description,
-        'attributes': get_attributes_to_display(campaign=campaign, thing=thing),
+        'attributes': get_attributes_to_display(campaign=campaign, thing=thing, include_location=include_location),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
         'random_attributes': random_attributes,
         'encounters': encounters,
@@ -180,11 +182,7 @@ def get_list_data(campaign, thing_type):
     for t in types:
         data_for_type = []
         for thing in Thing.objects.filter(campaign=campaign, thing_type__name__iexact=t).order_by('name'):
-            data_for_type.append({
-                'name': thing.name,
-                'description': thing.description,
-                'attributes': get_attributes_to_display(campaign=campaign, thing=thing)
-            })
+            data_for_type.append(get_details(campaign=campaign, thing=thing, get_child_detail_too=True))
         list_data.append({
             'name': '{0}s'.format(t),
             'things': data_for_type
