@@ -74,10 +74,10 @@ def go_to_closest_thing(campaign, name):
         return HttpResponseRedirect(reverse('campaign:detail', args=(result.name,)))
 
 
-def list_all(request, thing_type):
+def list_all(request, thing_type, bookmarks_only=False):
     campaign = Campaign.objects.get(is_active=True)
 
-    list_data = get_list_data(campaign=campaign, thing_type=thing_type)
+    list_data = get_list_data(campaign=campaign, thing_type=thing_type, bookmarks_only=bookmarks_only)
 
     context = {
         'types': list_data,
@@ -92,7 +92,11 @@ def list_all(request, thing_type):
 
 
 def list_everything(request):
-    return list_all(request, None)
+    return list_all(request=request, thing_type=None)
+
+
+def list_bookmarks(request):
+    return list_all(request=request, thing_type=None, bookmarks_only=True)
 
 
 def detail(request, name):
@@ -127,7 +131,7 @@ def import_campaign(request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             save_campaign(campaign=campaign, json_file=request.FILES['file'].read().decode('UTF-8'))
-            return HttpResponseRedirect(reverse('campaign:list_everything'))
+            return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
         else:
             logger.info(form.errors)
     else:
@@ -152,7 +156,7 @@ def import_settings(request):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             save_settings(json_file=request.FILES['file'].read().decode('UTF-8'))
-            return HttpResponseRedirect(reverse('campaign:list_everything'))
+            return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
         else:
             logger.info(form.errors)
     else:
@@ -202,7 +206,7 @@ def delete_thing(request, name):
     campaign = Campaign.objects.get(is_active=True)
     thing = get_object_or_404(Thing, campaign=campaign, name=name)
     delete_thing_and_children(thing)
-    return HttpResponseRedirect(reverse('campaign:list_everything'))
+    return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
 
 
 def delete_thing_and_children(thing):
@@ -499,7 +503,7 @@ def change_campaign(request, name):
     new_campaign.is_active = True
     new_campaign.save()
 
-    return HttpResponseRedirect(reverse('campaign:list_everything'))
+    return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
 
 
 def manage_randomizer_options(request, thing_type, attribute):
@@ -518,7 +522,7 @@ def manage_randomizer_options(request, thing_type, attribute):
                     if option:
                         randomizer_option = RandomizerAttributeOption(attribute=randomizer_attribute, name=option)
                         randomizer_option.save()
-                return HttpResponseRedirect(reverse('campaign:list_everything'))
+                return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
     else:
         if len(RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute)) > 0:
             form = SelectCategoryForAttributeForm()
@@ -549,7 +553,7 @@ def manage_randomizer_options_for_category(request, thing_type, attribute, categ
                     randomizer_attribute_category_option = RandomizerAttributeCategoryOption(category=randomizer_attribute_category,
                                                                                              name=option)
                     randomizer_attribute_category_option.save()
-            return HttpResponseRedirect(reverse('campaign:list_everything'))
+            return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
     else:
         form = EditOptionalTextFieldForm({'value': '\n'.join([o.name for o in RandomizerAttributeCategoryOption.objects.filter(category=randomizer_attribute_category).order_by('name')])})
 
@@ -682,7 +686,7 @@ def manage_weights(request, preset_name, attribute_name):
                 if len(parts) == 2:
                     weight = Weight(weight_preset=weight_preset, name_to_weight=parts[0].strip(), weight=int(parts[1]))
                     weight.save()
-            return HttpResponseRedirect(reverse('campaign:list_everything'))
+            return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
     else:
         existing_weights = ['{0}*{1}'.format(w.name_to_weight, w.weight) for w in Weight.objects.filter(weight_preset=weight_preset)]
         form = EditOptionalTextFieldForm({'value': '\n'.join(existing_weights)})
@@ -746,7 +750,7 @@ def new_generator_object(request, thing_type_name):
         form.refresh_fields(thing_type)
         if form.is_valid():
             generator_object = save_new_generator(thing_type=thing_type, form_data=form.cleaned_data)
-            return HttpResponseRedirect(reverse('campaign:list_everything'))
+            return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
         else:
             logger.info(form.errors)
     else:
@@ -770,7 +774,7 @@ def edit_generator_object(request, name):
         form.refresh_fields(generator_object.thing_type)
         if form.is_valid():
             generator_object = edit_generator(generator_object, form.cleaned_data)
-            return HttpResponseRedirect(reverse('campaign:list_everything'))
+            return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
         else:
             logger.info(form.errors)
     else:

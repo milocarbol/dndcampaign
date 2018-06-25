@@ -6,7 +6,7 @@ from . import views
 
 app_name = 'campaign'
 urlpatterns = [
-    path('', views.list_everything, name='list_everything'),
+    path('', views.list_bookmarks, name='list_bookmarks'),
     path('thing/<name>', views.detail, name='detail'),
     path('search', views.search, name='search'),
     path('export', views.export, name='export'),

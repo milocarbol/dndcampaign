@@ -171,7 +171,7 @@ def order_attribute_filters(attribute_filters):
     return sorted(ordered_filters, key=methodcaller('get', 'name'))
 
 
-def get_list_data(campaign, thing_type):
+def get_list_data(campaign, thing_type, bookmarks_only=False):
     if thing_type:
         types = [thing_type]
     else:
@@ -181,7 +181,12 @@ def get_list_data(campaign, thing_type):
 
     for t in types:
         data_for_type = []
-        for thing in Thing.objects.filter(campaign=campaign, thing_type__name__iexact=t).order_by('name'):
+        if bookmarks_only:
+            things_to_show = Thing.objects.filter(campaign=campaign, thing_type__name__iexact=t, is_bookmarked=True).order_by('name')
+        else:
+            things_to_show = Thing.objects.filter(campaign=campaign, thing_type__name__iexact=t).order_by('name')
+
+        for thing in things_to_show:
             data_for_type.append(get_details(campaign=campaign, thing=thing, get_child_detail_too=True))
         list_data.append({
             'name': '{0}s'.format(t),
