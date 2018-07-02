@@ -1,4 +1,4 @@
-function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker, beyond_url) {
+function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker, beyond_url, item_link_marker, item_url) {
     $(".thing-description, .encounter, .random_attribute").each(function() {
         var raw_description = "<p>" + $(this).text()
             .replace(/\n{2}/g, "</p><p>")
@@ -28,6 +28,18 @@ function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker
             else if (raw_description[i] == beyond_link_marker) {
                 if (reading) {
                     var link = "<a href=\"" + beyond_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
+                    new_description = new_description.replace(replace_me, link);
+                    name = '';
+                    reading = false;
+                }
+                else {
+                    new_description += replace_me;
+                    reading = true;
+                }
+            }
+            else if (raw_description[i] == item_link_marker) {
+                if (reading) {
+                    var link = "<a href=\"" + item_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
                     new_description = new_description.replace(replace_me, link);
                     name = '';
                     reading = false;

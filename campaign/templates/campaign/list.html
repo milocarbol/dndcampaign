@@ -36,7 +36,7 @@
 {% endblock %}
 {% block js_code %}
 <script>
-    addLinksToDescriptions("{{ thing_link_marker }}", "{{ thing_url }}", "{{ beyond_link_marker }}", "{{ beyond_url }}");
+    addLinksToDescriptions("{{ thing_link_marker }}", "{{ thing_url }}", "{{ beyond_link_marker }}", "{{ beyond_url }}", "{{ item_link_marker }}", "{{ item_url }}");
     {% for filter in filters %}
         {% for value in filter.values %}
             $("#{{ value.class }}").click(function() {

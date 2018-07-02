@@ -85,6 +85,8 @@ def list_all(request, thing_type, bookmarks_only=False):
         'thing_url': '/campaign/thing/',
         'beyond_link_marker': '$',
         'beyond_url': 'https://www.dndbeyond.com/monsters/',
+        'item_link_marker': '!',
+        'item_url': 'https://www.dndbeyond.com/magic-items/',
         'filters': get_filters(list_data)
     }
 
@@ -111,7 +113,9 @@ def detail(request, name):
         'thing_link_marker': '@',
         'thing_url': '/campaign/thing/',
         'beyond_link_marker': '$',
-        'beyond_url': 'https://www.dndbeyond.com/monsters/'
+        'beyond_url': 'https://www.dndbeyond.com/monsters/',
+        'item_link_marker': '!',
+        'item_url': 'https://www.dndbeyond.com/magic-items/'
     }
     return render(request, 'campaign/detail.html', build_context(context))
 
