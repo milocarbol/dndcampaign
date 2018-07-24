@@ -90,6 +90,12 @@ class NewNpcForm(forms.Form):
         self.fields['factions'].queryset = Thing.objects.filter(campaign=Campaign.objects.get(is_active=True), thing_type__name='Faction').order_by('name')
 
 
+class NewItemForm(forms.Form):
+    name = forms.CharField(label='Name')
+    description = forms.CharField(label='Description', widget=forms.Textarea)
+    link = forms.CharField(label='D&D Beyond URL', required=False)
+
+
 class AddLinkForm(forms.Form):
     name = forms.CharField(label='Name')
     value = forms.CharField(label='URL')

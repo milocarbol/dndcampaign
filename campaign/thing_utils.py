@@ -256,7 +256,7 @@ def save_new_faction(campaign, form_data):
         new_parent.save()
 
     if form_data['leader']:
-        leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Leader'), value=form_data['leader'])
+        leader = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Leader'), value=form_data['leader'])
         leader.save()
         leader_thing = Thing.objects.get(campaign=campaign, thing_type__name='NPC', name=form_data['leader'])
         if not leader_thing in thing.children.all():
@@ -264,15 +264,15 @@ def save_new_faction(campaign, form_data):
             thing.save()
 
     if form_data['attitude']:
-        attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='Faction'), value=form_data['attitude'])
+        attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Attitude', thing_type__name='Faction'), value=form_data['attitude'])
         attitude.save()
 
     if form_data['power']:
-        power = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Power'), value=form_data['power'])
+        power = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Power'), value=form_data['power'])
         power.save()
 
     if form_data['reach']:
-        reach = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Reach'), value=form_data['reach'])
+        reach = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Reach'), value=form_data['reach'])
         reach.save()
     return thing
 
@@ -290,19 +290,19 @@ def save_new_npc(campaign, form_data):
         new_parent.save()
 
     if form_data['race']:
-        race = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Race'), value=form_data['race'])
+        race = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Race'), value=form_data['race'])
         race.save()
 
     if form_data['attitude']:
-        attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Attitude', thing_type__name='NPC'), value=form_data['attitude'])
+        attitude = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Attitude', thing_type__name='NPC'), value=form_data['attitude'])
         attitude.save()
 
     if form_data['occupation']:
-        occupation = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Occupation'), value=form_data['occupation'])
+        occupation = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Occupation'), value=form_data['occupation'])
         occupation.save()
 
     if form_data['link']:
-        link = AttributeValue(thing=thing, attribute=Attribute.objects.get(name='Link'), value=form_data['link'])
+        link = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Link'), value=form_data['link'])
         link.save()
 
     if form_data['generate_hooks']:
@@ -313,6 +313,17 @@ def save_new_npc(campaign, form_data):
             if option:
                 random_attribute = RandomAttribute(thing=thing, text=option)
                 random_attribute.save()
+
+    return thing
+
+
+def save_new_item(campaign, form_data):
+    thing = Thing(campaign=campaign, name=form_data['name'], description=form_data['description'], thing_type=ThingType.objects.get(name='Item'))
+    thing.save()
+
+    if form_data['link']:
+        link = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Link'), value=form_data['link'])
+        link.save()
 
     return thing
 
