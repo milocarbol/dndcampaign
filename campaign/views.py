@@ -23,10 +23,12 @@ def build_context(context):
             'name': thing_type.name,
             'attributes': [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing_type)]
         })
-        bookmarks.append({
-            'name': thing_type.name,
-            'things': [t.name for t in Thing.objects.filter(campaign=campaign, thing_type=thing_type, is_bookmarked=True).order_by('name')]
-        })
+        bookmarked_things = [t.name for t in Thing.objects.filter(campaign=campaign, thing_type=thing_type, is_bookmarked=True).order_by('name')]
+        if bookmarked_things:
+            bookmarks.append({
+                'name': thing_type.name,
+                'things': bookmarked_things
+            })
     attribute_presets = []
     for preset in WeightPreset.objects.filter(campaign=campaign):
         attribute_presets.append(preset.attribute_name)
