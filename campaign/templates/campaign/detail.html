@@ -2,96 +2,10 @@
 {% block content %}
 <div class="container">
     <div class="row">
-        <div class="col-sm">
+        <div class="col-sm-10">
             <h1>{{ thing.name }}{% if thing.link %} <a href="{{ thing.link }}" class="badge badge-pill badge-danger" target="_blank">D&D Beyond</a>{% endif %}</h1>
-            {% include "campaign/summary_table.html" %}
-            <div class="thing-description">
-                {{ thing.description }}
-            </div>
         </div>
-    </div>
-    {% if thing.useful_links or thing.random_attributes %}
-        <div class="row">
-            {% if thing.useful_links %}
-                <div class="col-sm-4">
-                    <table class="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th scope="row">Links</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for link in thing.useful_links %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ link.value }}" target="_blank">{{ link.name }}</a>
-                                        <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:remove_link' thing.name link.name %}" role="button"> - </a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
-            {% if thing.random_attributes %}
-                <div class="col-sm-8">
-                    <table class="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th scope="row">
-                                    Hooks
-                                    <a class="btn btn-success btn-sm float-right" href="{% url 'campaign:add_one_random' thing.name %}" role="button"> + </a>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for random_attribute in thing.random_attributes %}
-                                <tr>
-                                    <td>
-                                        <div class="random_attribute">{{ random_attribute.text }}</div>
-                                        <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:delete_random' thing.name random_attribute.id %}" role="button"> - </a>
-                                        <a class="btn btn-secondary btn-sm float-right" href="{% url 'campaign:edit_random' thing.name random_attribute.id %}" role="button">Edit</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
-        </div>
-    {% endif %}
-    {% if thing.display_encounters %}
-        <div class="row">
-            {% for encounter_type in thing.encounters %}
-                {% if encounter_type.list %}
-                    <div class="col-sm-4">
-                        <table class="table table-bordered table-sm">
-                            <thead>
-                                <tr>
-                                    <th scope="row">d{{ encounter_type.count }}</th>
-                                    <th scope="row">Result</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for encounter in encounter_type.list %}
-                                    <tr>
-                                        <td>
-                                            {{ forloop.counter }}
-                                        </td>
-                                        <td class="encounter">
-                                            {{ encounter.name }}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% endif %}
-            {% endfor %}
-        </div>
-    {% endif %}
-    <div class="row">
-        <div class="col-sm text-right">
+        <div class="col-sm-2 text-right">
             <div class="btn-group dropleft">
                 <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Options
@@ -136,6 +50,106 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-sm-12">
+            {% include "campaign/summary_table.html" %}
+        </div>
+    </div>
+    <div class="row">
+        {% if thing.useful_links or thing.random_attributes %}
+            <div class="col-sm-8">
+        {% else %}
+            <div class="col-sm-12">
+        {% endif %}
+            <div class="thing-description">
+                {{ thing.description }}
+            </div>
+        </div>
+        {% if thing.useful_links or thing.random_attributes %}
+            <div class="col-sm-4">
+                {% if thing.useful_links %}
+                    <div class="row">
+                        <div class="col-sm">
+                            <table class="table table-bordered table-sm">
+                                <thead>
+                                    <tr>
+                                        <th scope="row">Links</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for link in thing.useful_links %}
+                                        <tr>
+                                            <td>
+                                                <a href="{{ link.value }}" target="_blank">{{ link.name }}</a>
+                                                <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:remove_link' thing.name link.name %}" role="button"> - </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if thing.random_attributes %}
+                    <div class="row">
+                        <div class="col-sm">
+                            <table class="table table-bordered table-sm">
+                                <thead>
+                                    <tr>
+                                        <th scope="row">
+                                            Hooks
+                                            <a class="btn btn-success btn-sm float-right" href="{% url 'campaign:add_one_random' thing.name %}" role="button"> + </a>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for random_attribute in thing.random_attributes %}
+                                        <tr>
+                                            <td>
+                                                <div class="random_attribute">{{ random_attribute.text }}</div>
+                                                <a class="btn btn-danger btn-sm float-right" href="{% url 'campaign:delete_random' thing.name random_attribute.id %}" role="button"> - </a>
+                                                <a class="btn btn-secondary btn-sm float-right" href="{% url 'campaign:edit_random' thing.name random_attribute.id %}" role="button">Edit</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+    {% if thing.display_encounters %}
+        <div class="row">
+            {% for encounter_type in thing.encounters %}
+                {% if encounter_type.list %}
+                    <div class="col-sm-4">
+                        <table class="table table-bordered table-sm">
+                            <thead>
+                                <tr>
+                                    <th scope="row">d{{ encounter_type.count }}</th>
+                                    <th scope="row">Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for encounter in encounter_type.list %}
+                                    <tr>
+                                        <td>
+                                            {{ forloop.counter }}
+                                        </td>
+                                        <td class="encounter">
+                                            {{ encounter.name }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
     {% if thing.parent_factions %}
         <div class="row">
             <div class="col-sm">
