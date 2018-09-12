@@ -65,16 +65,15 @@ def get_random_attribute_in_category_raw(thing_type, attribute, category):
         if original_randomizer_attribute_category.use_values_from.all():
             randomizer_attribute_category = random.choice(original_randomizer_attribute_category.use_values_from.all())
         else:
-            randomizer_attribute_category = RandomizerAttributeCategory.objects.get(attribute=randomizer_attribute,
-                                                                                    name__iexact=category)
+            randomizer_attribute_category = original_randomizer_attribute_category
     except RandomizerAttributeCategory.DoesNotExist:
         raise ValueError('Invalid randomizer attribute category for {0}: {1}'.format(attribute, category))
 
-    randomizer_attribute_category_2 = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
+    randomizer_attribute_category_2 = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute_category.attribute,
                                                                                  name__iexact=randomizer_attribute_category.name + '_2')
-    randomizer_attribute_category_synonym_first = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
+    randomizer_attribute_category_synonym_first = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute_category.attribute,
                                                                                              name__iexact=original_randomizer_attribute_category.name + '_synonym_first')
-    randomizer_attribute_category_synonym_last = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute,
+    randomizer_attribute_category_synonym_last = RandomizerAttributeCategory.objects.filter(attribute=randomizer_attribute_category.attribute,
                                                                                              name__iexact=original_randomizer_attribute_category.name + '_synonym_last')
 
     result = ''
