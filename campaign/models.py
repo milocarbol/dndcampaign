@@ -23,6 +23,7 @@ class Thing(models.Model):
     is_bookmarked = models.BooleanField(default=False)
     children = models.ManyToManyField('self', blank=True, symmetrical=False)
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE, null=True)
+    image = models.CharField(max_length=300, null=True, blank=True)
 
     class Meta:
         unique_together = (('campaign', 'name'),)

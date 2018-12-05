@@ -20,6 +20,7 @@ urlpatterns = [
     path('edit_encounters/<name>/<type_name>', views.edit_random_encounters, name='edit_encounters'),
     path('edit_description/<name>', views.edit_description, name='edit_description'),
     path('edit_name/<name>', views.edit_name, name='edit_name'),
+    path('edit_image/<name>', views.edit_image, name='edit_image'),
     path('randomize_name/<thing_type_name>/<name>', views.randomize_name, name='randomize_name'),
     path('change_campaign/<name>', views.change_campaign, name='change_campaign'),
     path('set_attribute/<name>/<attribute_name>', views.set_attribute, name='set_attribute'),

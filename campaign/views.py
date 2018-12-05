@@ -406,6 +406,28 @@ def edit_name(request, name):
     return render(request, 'campaign/edit_page.html', build_context(context))
 
 
+def edit_image(request, name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+
+    if request.method == 'POST':
+        form = ChangeRequiredTextAttributeForm(request.POST)
+        if form.is_valid():
+            new_image = form.cleaned_data['value']
+            thing.image = new_image
+            thing.save()
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = ChangeRequiredTextAttributeForm({'value': thing.image})
+
+    context = {
+        'form': form,
+        'header': 'Edit image for {0}'.format(thing.name),
+        'url': reverse('campaign:edit_image', args=(thing.name,))
+    }
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
 def edit_description(request, name):
     campaign = Campaign.objects.get(is_active=True)
     try:

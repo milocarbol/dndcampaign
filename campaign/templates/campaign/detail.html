@@ -12,6 +12,11 @@
                 </button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                     <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Location' thing.name %}">Move</a>
+                    {% if thing.image %}
+                        <a class="dropdown-item" href="{% url 'campaign:edit_image' thing.name %}">Edit image</a>
+                    {% else %}
+                        <a class="dropdown-item" href="{% url 'campaign:edit_image' thing.name %}">Add image</a>
+                    {% endif %}
                     {% if thing.thing_type == 'NPC' %}
                         <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Faction' thing.name %}">Set faction</a>
                     {% endif %}
@@ -56,7 +61,7 @@
         </div>
     </div>
     <div class="row">
-        {% if thing.useful_links or thing.random_attributes %}
+        {% if thing.useful_links or thing.random_attributes or thing.image %}
             <div class="col-sm-8">
         {% else %}
             <div class="col-sm-12">
@@ -65,8 +70,15 @@
                 {{ thing.description }}
             </div>
         </div>
-        {% if thing.useful_links or thing.random_attributes %}
+        {% if thing.useful_links or thing.random_attributes or thing.image %}
             <div class="col-sm-4">
+                {% if thing.image %}
+                    <div class="row">
+                        <div class="col-sm">
+                            <img class="img-fluid" src="{{ thing.image }}">
+                        </div>
+                    </div>
+                {% endif %}
                 {% if thing.useful_links %}
                     <div class="row">
                         <div class="col-sm">

@@ -28,6 +28,7 @@ def campaign_to_json(campaign):
         thing_data.append({
             'name': thing.name,
             'description': thing.description,
+            'image': thing.image,
             'thing_type': thing.thing_type.name,
             'children': [child.name for child in thing.children.all()],
             'attribute_values': attributes,
@@ -64,7 +65,7 @@ def save_campaign(campaign, json_file):
     data = json.loads(json_file)
     for thing in data['things']:
         thing_object = Thing(campaign=campaign, name=thing['name'], description=thing['description'],
-                             thing_type=ThingType.objects.get(name=thing['thing_type']),
+                             image=thing['image'], thing_type=ThingType.objects.get(name=thing['thing_type']),
                              is_bookmarked=thing['is_bookmarked'])
         thing_object.save()
 
