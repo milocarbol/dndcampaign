@@ -466,8 +466,11 @@ def set_attribute(request, name, attribute_name):
                     attribute_value = AttributeValue.objects.get(attribute=attribute, thing=thing)
                 except AttributeValue.DoesNotExist:
                     attribute_value = AttributeValue(attribute=attribute, thing=thing)
-                attribute_value.value = form.cleaned_data['value']
-                attribute_value.save()
+                if form.cleaned_data['clear_attribute'] and attribute_value.value:
+                    attribute_value.delete()
+                else:
+                    attribute_value.value = form.cleaned_data['value']
+                    attribute_value.save()
                 return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
         else:
             form = ChangeTextAttributeForm(request.POST)

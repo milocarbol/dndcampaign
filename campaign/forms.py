@@ -123,6 +123,7 @@ class ChangeRequiredTextAttributeForm(forms.Form):
 
 class ChangeOptionAttributeForm(forms.Form):
     value = forms.ChoiceField(label='Value', choices=[])
+    clear_attribute = forms.BooleanField(label='Clear attribute', required=False)
 
     def refresh_fields(self, thing_type, name):
         attribute = get_object_or_404(Attribute, thing_type=thing_type, name=name)
