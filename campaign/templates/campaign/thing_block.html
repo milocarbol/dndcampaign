@@ -7,22 +7,12 @@
                 </div>
             </div>
             <div class="row">
-                {% if thing.image %}
-                    <div class="col-sm-10">
-                {% else %}
-                    <div class="col-sm">
-                {% endif %}
+                <div class="col-sm">
                     <p class="mb-1 thing-description">{{ thing.description }}</p>
                 </div>
-                {% if thing.image %}
-                    <div class="col-sm-2">
-                        <img class="img-fluid" src="{{ thing.image }}">
-                    </div>
-                {% endif %}
             </div>
             <div class="row">
                 <div class="col-sm">
-                    {% include "campaign/summary_table.html" %}
                     {% include "campaign/children_table.html" %}
                 </div>
             </div>

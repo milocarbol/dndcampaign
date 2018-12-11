@@ -66,9 +66,22 @@
         {% else %}
             <div class="col-sm-12">
         {% endif %}
+            <h5>Summary</h5>
             <div class="thing-description">
                 {{ thing.description }}
             </div>
+        {% if thing.background %}
+            <h5>Background</h5>
+            <div class="thing-description">
+                {{ thing.background }}
+            </div>
+        {% endif %}
+        {% if thing.current_state %}
+            <h5>Recent events</h5>
+            <div class="thing-description">
+                {{ thing.current_state }}
+            </div>
+        {% endif %}
         </div>
         {% if thing.useful_links or thing.random_attributes or thing.image %}
             <div class="col-sm-4">

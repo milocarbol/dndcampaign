@@ -110,6 +110,8 @@ def get_details(campaign, thing, get_child_detail_too=False, include_location=Tr
         'name': thing.name,
         'thing_type': thing.thing_type.name,
         'description': thing.description,
+        'background': thing.background,
+        'current_state': thing.current_state,
         'attributes': get_attributes_to_display(campaign=campaign, thing=thing, include_location=include_location),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
         'image': thing.image,

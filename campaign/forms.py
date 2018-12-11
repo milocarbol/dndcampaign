@@ -41,7 +41,9 @@ class UploadFileForm(forms.Form):
 
 class NewLocationForm(forms.Form):
     name = forms.CharField(label='Name')
-    description = forms.CharField(label='Description', widget=forms.Textarea)
+    description = forms.CharField(label='Summary', widget=forms.Textarea)
+    background = forms.CharField(label='Background', widget=forms.Textarea, required=False)
+    current_state = forms.CharField(label='Current state', widget=forms.Textarea, required=False)
     location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
     factions = forms.ModelMultipleChoiceField(label='Factions', queryset=Thing.objects.all(), required=False)
     npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
@@ -59,7 +61,9 @@ class NewLocationForm(forms.Form):
 class NewFactionForm(forms.Form):
 
     name = forms.CharField(label='Name')
-    description = forms.CharField(label='Description', widget=forms.Textarea)
+    description = forms.CharField(label='Summary', widget=forms.Textarea)
+    background = forms.CharField(label='Background', widget=forms.Textarea, required=False)
+    current_state = forms.CharField(label='Current state', widget=forms.Textarea, required=False)
     location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
     npcs = forms.ModelMultipleChoiceField(label='NPCs', queryset=Thing.objects.all(), required=False)
 
@@ -78,7 +82,9 @@ class NewNpcForm(forms.Form):
     name = forms.CharField(label='Name')
     race = forms.CharField(label='Race')
     occupation = forms.CharField(label='Occupation', required=False)
-    description = forms.CharField(label='Description', widget=forms.Textarea)
+    description = forms.CharField(label='Summary', widget=forms.Textarea)
+    background = forms.CharField(label='Background', widget=forms.Textarea, required=False)
+    current_state = forms.CharField(label='Current state', widget=forms.Textarea, required=False)
     location = forms.ModelChoiceField(label='Located in', queryset=Thing.objects.all(), required=False)
     factions = forms.ModelMultipleChoiceField(label='Member of', queryset=Thing.objects.all(), required=False)
     attitude = forms.ChoiceField(label='Attitude', choices=ATTITUDE_CHOICES)
@@ -110,7 +116,9 @@ class EditEncountersForm(forms.Form):
 
 
 class EditDescriptionForm(forms.Form):
-    description = forms.CharField(label='Description', widget=forms.Textarea)
+    description = forms.CharField(label='Summary', widget=forms.Textarea)
+    background = forms.CharField(label='Background', widget=forms.Textarea, required=False)
+    current_state = forms.CharField(label='Current state', widget=forms.Textarea, required=False)
 
 
 class ChangeTextAttributeForm(forms.Form):

@@ -439,10 +439,17 @@ def edit_description(request, name):
         form = EditDescriptionForm(request.POST)
         if form.is_valid():
             thing.description = form.cleaned_data['description']
+            thing.background = form.cleaned_data['background']
+            thing.current_state = form.cleaned_data['current_state']
             thing.save()
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
-        form = EditDescriptionForm({'name': thing.name, 'description': thing.description})
+        form = EditDescriptionForm({
+            'name': thing.name,
+            'description': thing.description,
+            'background': thing.background,
+            'current_state': thing.current_state
+        })
 
     context = {
         'form': form,
