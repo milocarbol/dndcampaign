@@ -1,5 +1,6 @@
 from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic.base import RedirectView
 
 from . import views
 
@@ -43,5 +44,6 @@ urlpatterns = [
     path('edit_generator/<name>', views.edit_generator_object, name='edit_generator'),
     path('add_preset', views.add_preset, name='add_preset'),
     path('select_preset/<attribute_name>', views.select_preset, name='select_preset'),
-    path('manage_preset/<preset_name>/<attribute_name>', views.manage_weights, name='manage_preset')
+    path('manage_preset/<preset_name>/<attribute_name>', views.manage_weights, name='manage_preset'),
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.jpg', permanent=True))
 ]
