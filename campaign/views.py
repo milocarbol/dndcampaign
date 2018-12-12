@@ -217,7 +217,9 @@ def delete_thing(request, name):
 
 def delete_thing_and_children(thing):
     for child in thing.children.all():
+        logger.info('Deleting {0}...'.format(child.name))
         child.delete()
+    logger.info('Deleting {0}...'.format(thing.name))
     thing.delete()
 
 
