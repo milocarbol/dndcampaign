@@ -379,12 +379,13 @@ def randomize_name_for_thing(thing):
 def update_value_in_string(string, old_value, new_value):
     new_string = string.replace(old_value, new_value)
 
-    old_pieces = old_value.split(' ')
-    new_pieces = new_value.split(' ')
-    for i, piece in enumerate(old_pieces):
-        if i >= len(new_pieces):
-            break
-        new_string = new_string.replace(piece, new_pieces[i])
+    if ' ' in old_value:
+        old_pieces = old_value.split(' ')
+        new_pieces = new_value.split(' ')
+        for i, piece in enumerate(old_pieces):
+            if i >= len(new_pieces):
+                break
+            new_string = new_string.replace(piece, new_pieces[i])
     return new_string
 
 
@@ -393,6 +394,8 @@ def update_thing_name_and_all_related(thing, new_name, check_parents=True):
 
     thing.name = new_name
     thing.description = update_value_in_string(thing.description, name, new_name)
+    thing.background = update_value_in_string(thing.background, name, new_name)
+    thing.current_state = update_value_in_string(thing.current_state, name, new_name)
     thing.save()
 
     if thing.thing_type.name == 'NPC':
@@ -429,7 +432,7 @@ def update_thing_name_and_all_related(thing, new_name, check_parents=True):
     elif thing.thing_type.name == 'Location':
         try:
             ruler = AttributeValue.objects.get(attribute__name='Ruler', thing=thing)
-            npc = Thing.objects.get(thing_type__name='NPC', name=ruler.value)
+            npc = Thing.objects.get(campaign=thing.campaign, thing_type__name='NPC', name=ruler.value)
             npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
             npc_occupation.value = update_value_in_string(npc_occupation.value, name, new_name)
             npc_occupation.save()
@@ -444,7 +447,7 @@ def update_thing_name_and_all_related(thing, new_name, check_parents=True):
     elif thing.thing_type.name == 'Faction':
         try:
             leader = AttributeValue.objects.get(attribute__name='Leader', thing=thing)
-            npc = Thing.objects.get(thing_type__name='NPC', name=leader.value)
+            npc = Thing.objects.get(campaign=thing.campaign, thing_type__name='NPC', name=leader.value)
             npc_occupation = AttributeValue.objects.get(attribute__name='Occupation', thing=npc)
             npc_occupation.value = update_value_in_string(npc_occupation.value, name, new_name)
             npc_occupation.save()
