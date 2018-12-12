@@ -38,6 +38,7 @@ class Attribute(models.Model):
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE)
     name = models.CharField(max_length=50)
     display_in_summary = models.BooleanField(default=False)
+    editable = models.BooleanField(default=True)
     is_thing = models.BooleanField(default=False)
 
     class Meta:

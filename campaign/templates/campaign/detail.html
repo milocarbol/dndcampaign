@@ -11,22 +11,12 @@
                     Options
                 </button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Location' thing.name %}">Move</a>
-                    {% if thing.image %}
-                        <a class="dropdown-item" href="{% url 'campaign:edit_image' thing.name %}">Edit image</a>
-                    {% else %}
-                        <a class="dropdown-item" href="{% url 'campaign:edit_image' thing.name %}">Add image</a>
-                    {% endif %}
-                    {% if thing.thing_type == 'NPC' %}
-                        <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Faction' thing.name %}">Set faction</a>
-                    {% endif %}
-                    <a class="dropdown-item" href="{% url 'campaign:add_link' thing.name %}">Add link</a>
-                    <div class="dropdown-divider"></div>
                     {% if thing.is_bookmarked %}
                         <a class="dropdown-item" href="{% url 'campaign:bookmark' thing.name %}">Clear Bookmark</a>
                     {% else %}
                         <a class="dropdown-item" href="{% url 'campaign:bookmark' thing.name %}">Bookmark</a>
                     {% endif %}
+                    <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Location' thing.name %}">Move</a>
                     <div class="dropdown-divider"></div>
                     {% if thing.show_name_randomizer %}
                         <a class="dropdown-item" href="{% url 'campaign:randomize_name' thing.thing_type thing.name %}">Randomize Name</a>
@@ -35,10 +25,19 @@
                     <a class="dropdown-item" href="{% url 'campaign:edit_description' thing.name %}">Edit Description</a>
                     {% if thing.editable_attributes %}
                         {% for editable_attribute in thing.editable_attributes %}
-                            <a class="dropdown-item" href="{% url 'campaign:set_attribute' thing.name editable_attribute %}">Change {{ editable_attribute }}</a>
+                            <a class="dropdown-item" href="{% url 'campaign:set_attribute' thing.name editable_attribute %}">Edit {{ editable_attribute }}</a>
                         {% endfor %}
                     {% endif %}
+                    {% if thing.image %}
+                        <a class="dropdown-item" href="{% url 'campaign:edit_image' thing.name %}">Edit image</a>
+                    {% else %}
+                        <a class="dropdown-item" href="{% url 'campaign:edit_image' thing.name %}">Add image</a>
+                    {% endif %}
+                    {% if thing.thing_type == 'NPC' %}
+                        <a class="dropdown-item" href="{% url 'campaign:change_parent' 'Faction' thing.name %}">Set faction</a>
+                    {% endif %}
                     {% if thing.enable_random_encounters %}
+                        <div class="dropdown-divider"></div>
                         {% for encounter_type in thing.encounters %}
                             <a class="dropdown-item" href="{% url 'campaign:edit_encounters' thing.name encounter_type.encounter_type %}">Edit random {{ encounter_type.encounter_type }} encounters</a>
                         {% endfor %}
@@ -49,6 +48,7 @@
                             <a class="dropdown-item" href="{% url 'campaign:add_random' thing.name randomizer %}">Generate {{ randomizer }}s</a>
                         {% endfor %}
                     {% endif %}
+                    <a class="dropdown-item" href="{% url 'campaign:add_link' thing.name %}">Add useful link</a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="{% url 'campaign:delete_thing' thing.name %}">Delete</a>
                 </div>

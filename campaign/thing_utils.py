@@ -91,7 +91,8 @@ def get_details(campaign, thing, include_location=True):
             'list': random_encounters
         })
 
-    editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type, display_in_summary=True).order_by('name')]
+    attributes_to_display = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type, display_in_summary=True).order_by('name')]
+    editable_attributes = [a.name for a in Attribute.objects.filter(thing_type=thing.thing_type, editable=True).order_by('name')]
 
     random_attributes = [{'text': r.text, 'id': r.pk} for r in RandomAttribute.objects.filter(thing=thing).order_by('text')]
     randomizable_attributes = [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing.thing_type, can_randomize_later=True).order_by('name')]
@@ -109,6 +110,7 @@ def get_details(campaign, thing, include_location=True):
         'encounters': encounters,
         'display_encounters': display_encounters,
         'enable_random_encounters': thing.thing_type.name == 'Location',
+        'attributes_to_display': attributes_to_display,
         'editable_attributes': editable_attributes,
         'randomizable_attributes': randomizable_attributes,
         'is_bookmarked': thing.is_bookmarked,
