@@ -111,7 +111,7 @@ def detail(request, name):
         return go_to_closest_thing(campaign=campaign, name=name)
 
     context = {
-        'thing': get_details(campaign=campaign, thing=thing, get_child_detail_too=True),
+        'thing': get_details(campaign=campaign, thing=thing),
         'thing_link_marker': '@',
         'thing_url': '/campaign/thing/',
         'beyond_link_marker': '$',
