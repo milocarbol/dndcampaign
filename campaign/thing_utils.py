@@ -203,7 +203,12 @@ def get_filters(list_data):
 
 
 def save_new_location(campaign, form_data):
-    thing = Thing(campaign=campaign, name=form_data['name'], description=form_data['description'], thing_type=ThingType.objects.get(name='Location'))
+    thing = Thing(campaign=campaign,
+                  name=form_data['name'],
+                  description=form_data['description'],
+                  background=form_data['background'],
+                  current_state=form_data['current_state'],
+                  thing_type=ThingType.objects.get(name='Location'))
     thing.save()
 
     children = []
@@ -245,7 +250,12 @@ def save_new_location(campaign, form_data):
 
 
 def save_new_faction(campaign, form_data):
-    thing = Thing(campaign=campaign, name=form_data['name'], description=form_data['description'], thing_type=ThingType.objects.get(name='Faction'))
+    thing = Thing(campaign=campaign,
+                  name=form_data['name'],
+                  description=form_data['description'],
+                  background=form_data['background'],
+                  current_state=form_data['current_state'],
+                  thing_type=ThingType.objects.get(name='Faction'))
     thing.save()
 
     for child in form_data['npcs']:
@@ -280,7 +290,12 @@ def save_new_faction(campaign, form_data):
 
 
 def save_new_npc(campaign, form_data):
-    thing = Thing(campaign=campaign, name=form_data['name'], description=form_data['description'], thing_type=ThingType.objects.get(name='NPC'))
+    thing = Thing(campaign=campaign,
+                  name=form_data['name'],
+                  description=form_data['description'],
+                  background=form_data['background'],
+                  current_state=form_data['current_state'],
+                  thing_type=ThingType.objects.get(name='NPC'))
     thing.save()
 
     new_parents = []
