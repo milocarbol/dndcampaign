@@ -112,7 +112,7 @@ class RandomizerAttributeOption(models.Model):
         unique_together = (('name', 'attribute'),)
 
     def __str__(self):
-        return '[{0}] {1}'.format(self.attribute.name, self.name)
+        return '[{0}.{1}] {2}'.format(self.attribute.thing_type.name, self.attribute.name, self.name)
 
 
 
@@ -130,7 +130,7 @@ class RandomizerAttributeCategory(models.Model):
         unique_together = (('name', 'attribute'),)
 
     def __str__(self):
-        return '[{0}] {1}'.format(self.attribute.name, self.name)
+        return '[{0}.{1}] {2}'.format(self.attribute.thing_type.name, self.attribute.name, self.name)
 
 
 class RandomizerAttributeCategoryOption(models.Model):

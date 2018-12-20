@@ -335,7 +335,26 @@ def save_new_npc(campaign, form_data):
 
 
 def save_new_item(campaign, form_data):
-    thing = Thing(campaign=campaign, name=form_data['name'], description=form_data['description'], thing_type=ThingType.objects.get(name='Item'))
+    thing = Thing(campaign=campaign,
+                  name=form_data['name'],
+                  description=form_data['description'],
+                  background=form_data['background'],
+                  thing_type=ThingType.objects.get(name='Item'))
+    thing.save()
+
+    if form_data['link']:
+        link = AttributeValue(thing=thing, attribute=Attribute.objects.get(thing_type=thing.thing_type, name='Link'), value=form_data['link'])
+        link.save()
+
+    return thing
+
+
+def save_new_note(campaign, form_data):
+    thing = Thing(campaign=campaign,
+                  name=form_data['name'],
+                  description=form_data['description'],
+                  background=form_data['background'],
+                  thing_type=ThingType.objects.get(name='Note'))
     thing.save()
 
     if form_data['link']:

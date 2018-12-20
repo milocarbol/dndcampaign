@@ -98,7 +98,15 @@ class NewNpcForm(forms.Form):
 
 class NewItemForm(forms.Form):
     name = forms.CharField(label='Name')
-    description = forms.CharField(label='Description', widget=forms.Textarea)
+    description = forms.CharField(label='Summary', widget=forms.Textarea)
+    background = forms.CharField(label='Details', widget=forms.Textarea, required=False)
+    link = forms.CharField(label='D&D Beyond URL', required=False)
+
+
+class NewNoteForm(forms.Form):
+    name = forms.CharField(label='Name')
+    description = forms.CharField(label='Summary', widget=forms.Textarea)
+    background = forms.CharField(label='Details', widget=forms.Textarea, required=False)
     link = forms.CharField(label='D&D Beyond URL', required=False)
 
 

@@ -5,11 +5,11 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 
 from .export_utils import get_campaign_json, get_settings_json, save_campaign, save_settings
-from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, NewItemForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
+from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, NewItemForm, NewNoteForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
 from .randomizers import get_randomization_options_for_new_thing, get_random_attribute_in_category_raw, get_random_attribute_raw, generate_random_attributes_for_thing_raw
 from .generator_utils import generate_thing, save_new_generator, edit_generator
-from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, save_new_item, randomize_name_for_thing, update_thing_name_and_all_related
+from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, save_new_item, save_new_note, randomize_name_for_thing, update_thing_name_and_all_related
 
 
 logger = logging.getLogger(__name__)
@@ -232,6 +232,8 @@ def new_thing(request, thing_type):
         return create_new_npc(request)
     elif thing_type == 'Item':
         return create_new_item(request)
+    elif thing_type == 'Note':
+        return create_new_note(request)
     else:
         raise Http404
 
@@ -309,6 +311,24 @@ def create_new_item(request):
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
         form = NewItemForm()
+
+    context = {
+        'thing_form': form,
+        'thing_type': 'Item'
+    }
+    return render(request, 'campaign/new_thing.html', build_context(context))
+
+
+def create_new_note(request):
+    campaign = Campaign.objects.get(is_active=True)
+    if request.method == 'POST':
+        form = NewNoteForm(request.POST)
+        if form.is_valid():
+            thing = save_new_note(campaign=campaign, form_data=form.cleaned_data)
+
+            return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+    else:
+        form = NewNoteForm()
 
     context = {
         'thing_form': form,
