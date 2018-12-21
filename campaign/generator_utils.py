@@ -100,23 +100,31 @@ def generate_thing(generator_object, campaign, parent_object=None):
                 for variable in var_search:
                     if '.' in variable:
                         parts = variable.split('.')
-                        if parts[0] == 'parent' and parent_object:
+                        logger.debug('Using {0} from {1}...'.format(parts[1], parts[0]))
+                        if parts[0].lower() == 'parent' and parent_object:
                             try:
                                 parent_value = getattr(parent_object, parts[1])
                             except AttributeError:
                                 parent_value = AttributeValue.objects.get(attribute__name__iexact=parts[1], thing=parent_object).value
                             field['value'] = re.sub(r'\$\{' + variable + '\}', parent_value, field['value'])
                     else:
+                        logger.debug('Using {0}...'.format(variable))
                         for thing_field in fields_to_save['thing']:
-                            if thing_field['name'] == variable:
+                            logger.debug('Checking {0}'.format(thing_field['name']))
+                            if thing_field['name'].lower() == variable.lower():
+                                logger.debug('Updating "{0}" using "{1}"'.format(field['value'], thing_field['value']))
                                 field['value'] = re.sub(r'\$\{' + variable + '\}', thing_field['value'], field['value'])
                                 break
                         for thing_field in fields_to_save['attribute_values']:
+                            logger.debug('Checking {0}'.format(thing_field['attribute'].name))
                             if thing_field['attribute'].name.lower() == variable.lower():
+                                logger.debug('Updating "{0}" using "{1}"'.format(field['value'], thing_field['value']))
                                 field['value'] = re.sub(r'\$\{' + variable + '\}', thing_field['value'], field['value'])
                                 break
-            setattr(thing, field['name'], field['value'])
+            logger.debug('Setting thing.{0} to "{1}"'.format(field['name'].lower(), field['value']))
+            setattr(thing, field['name'].lower(), field['value'])
 
+    logger.debug('Trying to save thing: {0}'.format(thing))
     try:
         if thing.name:
             thing.save()
@@ -146,7 +154,7 @@ def generate_thing(generator_object, campaign, parent_object=None):
     name_randomizer = AttributeValue(thing=thing, attribute=name_randomizer_attribute)
     if thing.thing_type.name == 'NPC':
         name_randomizer.value = AttributeValue.objects.get(thing=thing, attribute__name='Race').value
-    elif thing.thing_type.name == 'Faction' or thing.thing_type.name == 'Location':
+    elif thing.thing_type.name == 'Faction' or thing.thing_type.name == 'Location' or thing.thing_type.name == 'Item':
         name_randomizer.value = generator_object.name
     name_randomizer.save()
 
@@ -279,7 +287,7 @@ def save_new_generator(thing_type, form_data):
                                             inherit_settings_from=form_data['inherit_settings_from'],
                                             attribute_for_container=form_data['attribute_for_container'])
     generator_object.save()
-    logger.info('Saved new generator {0}: name={1}, inherit_settings_from={2}, attribute_for_container={3}'.format(generator_object.name,
+    logger.info('Saved new generator {0}: inherit_settings_from={1}, attribute_for_container={2}'.format(generator_object.name,
                                                                                                                    generator_object.inherit_settings_from,
                                                                                                                    generator_object.attribute_for_container))
 

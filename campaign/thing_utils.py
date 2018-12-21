@@ -428,8 +428,10 @@ def update_thing_name_and_all_related(thing, new_name, check_parents=True):
 
     thing.name = new_name
     thing.description = update_value_in_string(thing.description, name, new_name)
-    thing.background = update_value_in_string(thing.background, name, new_name)
-    thing.current_state = update_value_in_string(thing.current_state, name, new_name)
+    if thing.background:
+        thing.background = update_value_in_string(thing.background, name, new_name)
+    if thing.current_state:
+        thing.current_state = update_value_in_string(thing.current_state, name, new_name)
     thing.save()
 
     if thing.thing_type.name == 'NPC':
