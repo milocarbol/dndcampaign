@@ -813,7 +813,7 @@ def generate_object(request, name):
 def generate_object_in_location(request, location_name, generator_name):
     generator_object = get_object_or_404(GeneratorObject, name=generator_name)
     campaign = get_object_or_404(Campaign, is_active=True)
-    parent = get_object_or_404(Thing, thing_type__name='Location', name__iexact=location_name)
+    parent = get_object_or_404(Thing, thing_type__name='Location', name__iexact=location_name, campaign=campaign)
     thing = generate_thing(generator_object, campaign, parent)
     if thing:
         parent.children.add(thing)
