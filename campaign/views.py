@@ -208,6 +208,17 @@ def change_parent(request, thing_type_name, name):
     return render(request, 'campaign/edit_page.html', build_context(context))
 
 
+def change_thing_type(request, thing_type_name, name):
+    campaign = Campaign.objects.get(is_active=True)
+    thing_type = get_object_or_404(ThingType, name=thing_type_name)
+    thing = get_object_or_404(Thing, campaign=campaign, name=name)
+
+    thing.thing_type = thing_type
+    thing.save()
+
+    return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
+
+
 def delete_thing(request, name):
     campaign = Campaign.objects.get(is_active=True)
     thing = get_object_or_404(Thing, campaign=campaign, name=name)

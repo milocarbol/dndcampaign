@@ -27,6 +27,7 @@ urlpatterns = [
     path('set_attribute/<name>/<attribute_name>', views.set_attribute, name='set_attribute'),
     path('remove_link/<name>/<link_name>', views.remove_link, name='remove_link'),
     path('change_parent/<thing_type_name>/<name>', views.change_parent, name='change_parent'),
+    path('change_thing_type/<name>/<thing_type_name>', views.change_thing_type, name='change_thing_type'),
     path('random/<thing_type>/<attribute>', views.get_random_attribute, name='get_random_attribute'),
     path('random/<thing_type>/<attribute>/<category>', views.get_random_attribute_in_category, name='get_random_attribute_in_category'),
     path('manage/<thing_type>/<attribute>', views.manage_randomizer_options, name='manage_randomizer_options'),
