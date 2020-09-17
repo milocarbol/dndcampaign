@@ -1,4 +1,4 @@
-function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker, beyond_url, item_link_marker, item_url) {
+function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker, beyond_url, item_link_marker, item_url, spell_link_marker, spell_url) {
     $(".thing-description, .encounter, .random_attribute").each(function() {
         var raw_description = "<p>" + $(this).text()
             .replace(/\n{2}/g, "</p><p>")
@@ -15,8 +15,9 @@ function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker
         for (var i = 0; i < raw_description.length; i++) {
             if (raw_description[i] == thing_link_marker) {
                 if (reading) {
-                    var link = "<a href=\"" + thing_url + name + "\">" + name + "</a>";
+                    var link = "<a class=\"thing\" href=\"" + thing_url + name + "\">" + name + "</a>";
                     new_description = new_description.replace(replace_me, link);
+                    console.log("Replaced " + name + " with " + link);
                     name = '';
                     reading = false;
                 }
@@ -27,8 +28,9 @@ function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker
             }
             else if (raw_description[i] == beyond_link_marker) {
                 if (reading) {
-                    var link = "<a href=\"" + beyond_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
+                    var link = "<a class=\"monster\" href=\"" + beyond_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
                     new_description = new_description.replace(replace_me, link);
+                    console.log("Replaced " + name + " with " + link);
                     name = '';
                     reading = false;
                 }
@@ -39,8 +41,22 @@ function addLinksToDescriptions(thing_link_marker, thing_url, beyond_link_marker
             }
             else if (raw_description[i] == item_link_marker) {
                 if (reading) {
-                    var link = "<a href=\"" + item_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
+                    var link = "<a class=\"item\" href=\"" + item_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
                     new_description = new_description.replace(replace_me, link);
+                    console.log("Replaced " + name + " with " + link);
+                    name = '';
+                    reading = false;
+                }
+                else {
+                    new_description += replace_me;
+                    reading = true;
+                }
+            }
+            else if (raw_description[i] == spell_link_marker) {
+                if (reading) {
+                    var link = "<a class=\"spell\" href=\"" + spell_url + name.replace(/ /g, '-') + "\" target=\"_blank\">" + name + "</a>";
+                    new_description = new_description.replace(replace_me, link);
+                    console.log("Replaced " + name + " with " + link);
                     name = '';
                     reading = false;
                 }

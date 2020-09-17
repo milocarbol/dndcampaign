@@ -1,0 +1,18 @@
+a.spell {
+    color: DarkViolet;
+    font-weight: bold;
+}
+
+a.item {
+    color: GoldenRod;
+    font-weight: bold;
+}
+
+a.thing {
+    color: ForestGreen;
+}
+
+a.monster {
+    color: FireBrick;
+    font-weight: bold;
+}

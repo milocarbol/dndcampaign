@@ -12,7 +12,7 @@
             {% for attribute in thing.attributes %}
                 <td class="text-center">
                     {% if attribute.can_link %}
-                        <a href="{% url 'campaign:detail' attribute.value %}">
+                        <a class="thing" href="{% url 'campaign:detail' attribute.value %}">
                     {% endif %}
                     {{ attribute.value }}
                     {% if attribute.can_link %}

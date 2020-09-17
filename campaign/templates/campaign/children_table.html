@@ -19,7 +19,7 @@
                     <td>
                         <ul>
                             {% for faction in thing.child_factions %}
-                                <li><a href="{% url 'campaign:detail' faction.name %}">{{ faction.name }}</a></li>
+                                <li><a class="thing" href="{% url 'campaign:detail' faction.name %}">{{ faction.name }}</a></li>
                             {% endfor %}
                         </ul>
                     </td>
@@ -28,7 +28,7 @@
                     <td>
                         <ul>
                             {% for location in thing.child_locations %}
-                                <li><a href="{% url 'campaign:detail' location.name %}">{{ location.name }}</a></li>
+                                <li><a class="thing" href="{% url 'campaign:detail' location.name %}">{{ location.name }}</a></li>
                             {% endfor %}
                         </ul>
                     </td>
@@ -37,7 +37,7 @@
                     <td>
                         <ul>
                             {% for npc in thing.child_npcs %}
-                                <li><a href="{% url 'campaign:detail' npc.name %}">{{ npc.name }}</a></li>
+                                <li><a class="thing" href="{% url 'campaign:detail' npc.name %}">{{ npc.name }}</a></li>
                             {% endfor %}
                         </ul>
                     </td>
