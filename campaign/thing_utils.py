@@ -1,6 +1,7 @@
 import logging
 import random
 import re
+from django.db.models.functions import Length
 from operator import methodcaller
 
 from .generator_utils import VARIABLE_REGEX
@@ -97,12 +98,25 @@ def get_details(campaign, thing, include_location=True):
     random_attributes = [{'text': r.text, 'id': r.pk} for r in RandomAttribute.objects.filter(thing=thing).order_by('text')]
     randomizable_attributes = [a.name for a in RandomizerAttribute.objects.filter(thing_type=thing.thing_type, can_randomize_later=True).order_by('name')]
 
+
+    desc = thing.markup_description
+    if not desc:
+        desc = thing.description
+
+    bgrnd = thing.markup_background
+    if not bgrnd:
+        bgrnd = thing.background
+
+    cs = thing.markup_current_state
+    if not cs:
+        cs = thing.current_state
+
     thing_info = {
         'name': thing.name,
         'thing_type': thing.thing_type.name,
-        'description': thing.description,
-        'background': thing.background,
-        'current_state': thing.current_state,
+        'description': desc,
+        'background': bgrnd,
+        'current_state': cs,
         'attributes': get_attributes_to_display(campaign=campaign, thing=thing, include_location=include_location),
         'useful_links': UsefulLink.objects.filter(thing=thing).order_by('name'),
         'image': thing.image,
@@ -490,3 +504,14 @@ def update_thing_name_and_all_related(thing, new_name, check_parents=True):
             logger.info('Updated occupation of {0}: {1}'.format(npc.name, npc_occupation.value))
         except AttributeValue.DoesNotExist:
             pass
+
+
+def clean_description(text):
+    return text.replace('@', '')
+
+
+def update_thing_references(text, campaign):
+    new_text = text.replace('@', '')
+    for thing in Thing.objects.filter(campaign=campaign).order_by(Length('name').asc()):
+        new_text = new_text.replace(thing.name, '@{0}@'.format(thing.name))
+    return new_text

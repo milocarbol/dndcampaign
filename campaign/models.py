@@ -22,6 +22,11 @@ class Thing(models.Model):
     description = models.TextField(null=False, blank=True)
     background = models.TextField(null=True, blank=True)
     current_state = models.TextField(null=True, blank=True)
+
+    markup_description = models.TextField(null=True, blank=True)
+    markup_background = models.TextField(null=True, blank=True)
+    markup_current_state = models.TextField(null=True, blank=True)
+
     is_bookmarked = models.BooleanField(default=False)
     children = models.ManyToManyField('self', blank=True, symmetrical=False)
     thing_type = models.ForeignKey(ThingType, on_delete=models.CASCADE, null=True)

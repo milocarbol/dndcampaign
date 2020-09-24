@@ -9,7 +9,7 @@ from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, Upl
 from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
 from .randomizers import get_randomization_options_for_new_thing, get_random_attribute_in_category_raw, get_random_attribute_raw, generate_random_attributes_for_thing_raw
 from .generator_utils import generate_thing, save_new_generator, edit_generator
-from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, save_new_item, save_new_note, randomize_name_for_thing, update_thing_name_and_all_related
+from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, save_new_item, save_new_note, randomize_name_for_thing, update_thing_name_and_all_related, update_thing_references, clean_description
 
 
 logger = logging.getLogger(__name__)
@@ -475,9 +475,14 @@ def edit_description(request, name):
     if request.method == 'POST':
         form = EditDescriptionForm(request.POST)
         if form.is_valid():
-            thing.description = form.cleaned_data['description']
-            thing.background = form.cleaned_data['background']
-            thing.current_state = form.cleaned_data['current_state']
+            thing.description = clean_description(form.cleaned_data['description'])
+            thing.background = clean_description(form.cleaned_data['background'])
+            thing.current_state = clean_description(form.cleaned_data['current_state'])
+
+            thing.markup_description = update_thing_references(form.cleaned_data['description'], campaign=thing.campaign)
+            thing.markup_background = update_thing_references(form.cleaned_data['background'], campaign=thing.campaign)
+            thing.markup_current_state = update_thing_references(form.cleaned_data['current_state'], campaign=thing.campaign)
+
             thing.save()
             return HttpResponseRedirect(reverse('campaign:detail', args=(thing.name,)))
     else:
