@@ -74,6 +74,26 @@ class UsefulLink(models.Model):
         return '[{0}] {1}:{2}'.format(self.thing.name, self.name, self.value)
 
 
+class DndBeyondType(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    base_url = models.CharField(max_length=50)
+    markup_symbol = models.CharField(max_length=1)
+
+    def __str__(self):
+        return '{0}: {1} ({2})'.format(self.name, self.base_url, self.markup_symbol)
+
+
+class DndBeyondRef(models.Model):
+    dndbeyond_type = models.ForeignKey(DndBeyondType, on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)
+
+    class Meta:
+        unique_together = (('dndbeyond_type', 'name'),)
+
+    def __str__(self):
+        return '[{0}] {1}'.format(self.dndbeyond_type.name, self.name)
+
+
 class RandomEncounterType(models.Model):
     name = models.CharField(max_length=10, unique=True)
 

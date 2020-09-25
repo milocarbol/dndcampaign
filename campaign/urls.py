@@ -33,6 +33,7 @@ urlpatterns = [
     path('manage/<thing_type>/<attribute>', views.manage_randomizer_options, name='manage_randomizer_options'),
     path('manage/<thing_type>/<attribute>/<category>', views.manage_randomizer_options_for_category, name='manage_randomizer_options_for_category'),
     path('add_random/<name>/<attribute>', views.generate_random_attributes_for_thing, name='add_random'),
+    path('ddb/<dndbeyond_type>/refs', views.manage_dndbeyond_refs, name='manage_dndbeyond_refs'),
     path('add_one_random/<name>', views.add_random_attribute_for_thing, name='add_one_random'),
     path('edit_random/<name>/<random_attribute_id>', views.edit_random_attribute_for_thing, name='edit_random'),
     path('delete_random/<name>/<random_attribute_id>', views.delete_random_attribute_for_thing, name='delete_random'),

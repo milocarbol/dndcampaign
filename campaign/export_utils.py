@@ -1,6 +1,6 @@
 import json
 
-from .models import Thing, AttributeValue, UsefulLink, RandomEncounter, RandomAttribute, Weight, WeightPreset, ThingType, Attribute, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeOption, RandomizerAttributeCategoryOption, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute
+from .models import Thing, AttributeValue, UsefulLink, DndBeyondRef, DndBeyondType, RandomEncounter, RandomAttribute, Weight, WeightPreset, ThingType, Attribute, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeOption, RandomizerAttributeCategoryOption, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute
 
 
 def campaign_to_json(campaign):
@@ -193,10 +193,21 @@ def generator_settings_to_json():
     return generator_data
 
 
+def ddb_refs_to_json():
+    ddb_data = []
+    for ddb_type in DndBeyondType.objects.all():
+        ddb_data.append({
+            'name': ddb_type.name,
+            'refs':  [r.name for r in DndBeyondRef.objects.filter(dndbeyond_type=ddb_type).order_by('name')]
+        })
+    return ddb_data
+
+
 def get_settings_json():
     return {
         'thing_types': thing_settings_to_json(),
-        'generators': generator_settings_to_json()
+        'generators': generator_settings_to_json(),
+        'dndbeyond_refs': ddb_refs_to_json()
     }
 
 

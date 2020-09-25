@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from .export_utils import get_campaign_json, get_settings_json, save_campaign, save_settings
 from .forms import AddLinkForm, ChangeRequiredTextAttributeForm, SearchForm, UploadFileForm, NewLocationForm, NewFactionForm, NewNpcForm, NewItemForm, NewNoteForm, EditEncountersForm, EditDescriptionForm, ChangeTextAttributeForm, ChangeOptionAttributeForm, ChangeParentForm, EditOptionalTextFieldForm, SelectCategoryForAttributeForm, SelectGeneratorObject, SelectPreset, NewPreset, GeneratorObjectForm, SelectGeneratorObjectWithLocation
-from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset
+from .models import Thing, ThingType, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounter, RandomEncounterType, RandomizerAttribute, RandomizerAttributeCategory, RandomizerAttributeCategoryOption, RandomizerAttributeOption, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, Weight, WeightPreset, DndBeyondRef, DndBeyondType
 from .randomizers import get_randomization_options_for_new_thing, get_random_attribute_in_category_raw, get_random_attribute_raw, generate_random_attributes_for_thing_raw
 from .generator_utils import generate_thing, save_new_generator, edit_generator
 from .thing_utils import get_details, get_list_data, get_filters, save_new_faction, save_new_location, save_new_npc, save_new_item, save_new_note, randomize_name_for_thing, update_thing_name_and_all_related, update_thing_references, clean_description
@@ -40,7 +40,8 @@ def build_context(context):
         'attribute_settings': attribute_settings,
         'attribute_presets': attribute_presets,
         'bookmarks': bookmarks,
-        'thing_types': [tt.name for tt in ThingType.objects.all().order_by('name')]
+        'thing_types': [tt.name for tt in ThingType.objects.all().order_by('name')],
+        'dndbeyond_types': [ddb.name for ddb in DndBeyondType.objects.all().order_by('name')]
     }
     full_context.update(context)
     return full_context
@@ -943,4 +944,27 @@ def select_generator_to_edit(request, thing_type_name):
         'url': reverse('campaign:manage_generators', args=(thing_type.name,))
     }
 
+    return render(request, 'campaign/edit_page.html', build_context(context))
+
+
+def manage_dndbeyond_refs(request, dndbeyond_type):
+    ddbtype = get_object_or_404(DndBeyondType, name__iexact=dndbeyond_type)
+
+    if request.method == 'POST':
+        form = EditOptionalTextFieldForm(request.POST)
+        if form.is_valid():
+            DndBeyondRef.objects.filter(dndbeyond_type=ddbtype).delete()
+            for ref in set([r.strip() for r in form.cleaned_data['value'].split('\n')]):
+                new_ref = DndBeyondRef(dndbeyond_type=ddbtype, name=ref)
+                new_ref.save()
+        return HttpResponseRedirect(reverse('campaign:list_bookmarks'))
+    else:
+        refs = [r.name for r in DndBeyondRef.objects.filter(dndbeyond_type=ddbtype).order_by('name')]
+        form = EditOptionalTextFieldForm({'value': '\n'.join(refs)})
+
+    context = {
+        'form': form,
+        'header': 'Edit D&D Beyond references for {0}s'.format(dndbeyond_type.lower()),
+        'url': reverse('campaign:manage_dndbeyond_refs', args=(dndbeyond_type,))
+    }
     return render(request, 'campaign/edit_page.html', build_context(context))

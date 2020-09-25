@@ -65,6 +65,11 @@
                                 Settings
                             </a>
                             <div class="dropdown-menu" aria-labelledby="settingsDropdown">
+                                <h6 class="dropdown-header">D&D Beyond References</h6>
+                                {% for dndbeyond_type in dndbeyond_types %}
+                                    <a class="dropdown-item" href="{% url 'campaign:manage_dndbeyond_refs' dndbeyond_type %}">{{ dndbeyond_type }}s</a>
+                                {% endfor %}
+                                <div class="dropdown-divider"></div>
                                 {% for thing_type in attribute_settings %}
                                     <h6 class="dropdown-header">{{ thing_type.name }}s</h6>
                                     {% for attribute in thing_type.attributes %}

@@ -5,7 +5,7 @@ from django.db.models.functions import Length
 from operator import methodcaller
 
 from .generator_utils import VARIABLE_REGEX
-from .models import Thing, ThingType, RandomEncounter, RandomizerAttribute, Attribute, UsefulLink, RandomAttribute, AttributeValue, RandomEncounterType
+from .models import Thing, ThingType, DndBeyondRef, DndBeyondType, RandomEncounter, RandomizerAttribute, Attribute, UsefulLink, RandomAttribute, AttributeValue, RandomEncounterType
 from .randomizers import get_random_attribute_raw, get_random_attribute_in_category_raw
 
 
@@ -222,6 +222,9 @@ def save_new_location(campaign, form_data):
                   description=form_data['description'],
                   background=form_data['background'],
                   current_state=form_data['current_state'],
+                  markup_description=update_thing_references(form_data['description'], campaign),
+                  markup_background=update_thing_references(form_data['background'], campaign),
+                  markup_current_state=update_thing_references(form_data['current_state'], campaign),
                   thing_type=ThingType.objects.get(name='Location'))
     thing.save()
 
@@ -269,6 +272,9 @@ def save_new_faction(campaign, form_data):
                   description=form_data['description'],
                   background=form_data['background'],
                   current_state=form_data['current_state'],
+                  markup_description=update_thing_references(form_data['description'], campaign),
+                  markup_background=update_thing_references(form_data['background'], campaign),
+                  markup_current_state=update_thing_references(form_data['current_state'], campaign),
                   thing_type=ThingType.objects.get(name='Faction'))
     thing.save()
 
@@ -309,6 +315,9 @@ def save_new_npc(campaign, form_data):
                   description=form_data['description'],
                   background=form_data['background'],
                   current_state=form_data['current_state'],
+                  markup_description=update_thing_references(form_data['description'], campaign),
+                  markup_background=update_thing_references(form_data['background'], campaign),
+                  markup_current_state=update_thing_references(form_data['current_state'], campaign),
                   thing_type=ThingType.objects.get(name='NPC'))
     thing.save()
 
@@ -353,6 +362,8 @@ def save_new_item(campaign, form_data):
                   name=form_data['name'],
                   description=form_data['description'],
                   background=form_data['background'],
+                  markup_description=update_thing_references(form_data['description'], campaign),
+                  markup_background=update_thing_references(form_data['background'], campaign),
                   thing_type=ThingType.objects.get(name='Item'))
     thing.save()
 
@@ -368,6 +379,8 @@ def save_new_note(campaign, form_data):
                   name=form_data['name'],
                   description=form_data['description'],
                   background=form_data['background'],
+                  markup_description=update_thing_references(form_data['description'], campaign),
+                  markup_background=update_thing_references(form_data['background'], campaign),
                   thing_type=ThingType.objects.get(name='Note'))
     thing.save()
 
@@ -507,11 +520,17 @@ def update_thing_name_and_all_related(thing, new_name, check_parents=True):
 
 
 def clean_description(text):
-    return text.replace('@', '')
+    return text.replace('@', '').replace('$', '').replace('!', '').replace('^', '')
 
 
 def update_thing_references(text, campaign):
     new_text = text.replace('@', '')
     for thing in Thing.objects.filter(campaign=campaign).order_by(Length('name').asc()):
         new_text = new_text.replace(thing.name, '@{0}@'.format(thing.name))
+
+    for dndbeyond_type in DndBeyondType.objects.all():
+        new_text = new_text.replace(dndbeyond_type.markup_symbol, '')
+        for dndbeyond_ref in DndBeyondRef.objects.filter(dndbeyond_type=dndbeyond_type):
+            new_text = new_text.replace(dndbeyond_ref.name, '{0}{1}{0}'.format(dndbeyond_type.markup_symbol, dndbeyond_ref.name))
+
     return new_text

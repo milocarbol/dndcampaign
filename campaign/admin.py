@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from .forms import ChangeCampaignForm, CopyToCampaignForm
-from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, Campaign, RandomEncounterType, RandomEncounter, RandomizerAttribute, RandomizerAttributeOption, RandomizerAttributeCategoryOption, RandomizerAttributeCategory, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, WeightPreset, Weight
+from .models import ThingType, Thing, Attribute, AttributeValue, UsefulLink, DndBeyondType, DndBeyondRef, Campaign, RandomEncounterType, RandomEncounter, RandomizerAttribute, RandomizerAttributeOption, RandomizerAttributeCategoryOption, RandomizerAttributeCategory, RandomAttribute, GeneratorObject, GeneratorObjectContains, GeneratorObjectFieldToRandomizerAttribute, WeightPreset, Weight
 
 
 class ThingAdmin(admin.ModelAdmin):
@@ -88,6 +88,8 @@ admin.site.register(Thing, ThingAdmin)
 admin.site.register(Attribute)
 admin.site.register(AttributeValue)
 admin.site.register(UsefulLink)
+admin.site.register(DndBeyondType)
+admin.site.register(DndBeyondRef)
 admin.site.register(Campaign)
 admin.site.register(RandomEncounterType)
 admin.site.register(RandomEncounter)
